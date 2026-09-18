@@ -238,6 +238,7 @@ class VirtualPrinterInstance:
         queue_force_color_match: bool = False,
         save_ams_mapping: bool = False,
         gcode_injection: bool = False,
+        queue_auto_batch: bool = False,
         bind_ip: str = "",
         remote_interface_ip: str = "",
         tailscale_disabled: bool = True,
@@ -262,6 +263,7 @@ class VirtualPrinterInstance:
         self.queue_force_color_match = queue_force_color_match
         self.save_ams_mapping = save_ams_mapping
         self.gcode_injection = gcode_injection
+        self.queue_auto_batch = queue_auto_batch
         self.bind_ip = bind_ip
         self.remote_interface_ip = remote_interface_ip
         self.tailscale_disabled = tailscale_disabled
@@ -835,6 +837,7 @@ class VirtualPrinterInstance:
             import json
 
             from backend.app.api.routes.settings import get_setting
+            from backend.app.models.print_batch import PrintBatch, PrintBatchPlate
             from backend.app.models.print_queue import PrintQueueItem
             from backend.app.services.archive import ArchiveService
             from backend.app.services.filament_requirements import extract_filament_requirements
@@ -1061,6 +1064,36 @@ class VirtualPrinterInstance:
                     # force_color_match. filament_overrides only carries
                     # force_color_match=True when the per-VP setting is on, so
                     # upgraders keep the old behaviour by default.
+                    # Group a Send All under one batch when the VP opts in.
+                    # Only for a genuine multi-plate upload: a single-plate
+                    # Send would produce a batch of one, which says nothing the
+                    # queue row doesn't already say. Plate targets are what let
+                    # the batch report a failed plate as still owed (#342),
+                    # same shape the Print modal creates for its own
+                    # multi-plate submissions.
+                    batch_id: int | None = None
+                    if self.queue_auto_batch and len(plate_ids) > 1:
+                        base_name = (archive.print_name or archive.filename or "Batch").removesuffix(".3mf")
+                        base_name = base_name.removesuffix(".gcode")
+                        batch = PrintBatch(
+                            name=f"{base_name} · {len(plate_ids)} plates"[:255],
+                            archive_id=archive.id,
+                            quantity=len(plate_ids),
+                            status="active",
+                        )
+                        db.add(batch)
+                        await db.flush()
+                        batch_id = batch.id
+                        for sort_order, batch_plate_id in enumerate(plate_ids):
+                            db.add(
+                                PrintBatchPlate(
+                                    batch_id=batch_id,
+                                    plate_id=batch_plate_id,
+                                    quantity_target=1,
+                                    sort_order=sort_order,
+                                )
+                            )
+
                     queue_item_ids: list[int] = []
                     for offset, plate_id in enumerate(plate_ids, start=1):
                         required_filament_types_json: str | None = None
@@ -1122,6 +1155,7 @@ class VirtualPrinterInstance:
                             printer_id=self.target_printer_id,
                             target_model=target_model,
                             archive_id=archive.id,
+                            batch_id=batch_id,
                             plate_id=plate_id,
                             position=max_pos + offset,
                             status="pending",
@@ -1745,6 +1779,7 @@ class VirtualPrinterManager:
                 or instance.queue_force_color_match != vp.queue_force_color_match
                 or instance.save_ams_mapping != vp.save_ams_mapping
                 or instance.gcode_injection != vp.gcode_injection
+                or instance.queue_auto_batch != vp.queue_auto_batch
                 or proxy_target_changed
             )
 
@@ -1800,6 +1835,7 @@ class VirtualPrinterManager:
                     queue_force_color_match=vp.queue_force_color_match,
                     save_ams_mapping=vp.save_ams_mapping,
                     gcode_injection=vp.gcode_injection,
+                    queue_auto_batch=vp.queue_auto_batch,
                     bind_ip=vp.bind_ip or "",
                     remote_interface_ip=vp.remote_interface_ip or "",
                     tailscale_disabled=vp.tailscale_disabled,
