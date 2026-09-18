@@ -57,6 +57,7 @@ export function VirtualPrinterCard({ printer, models }: VirtualPrinterCardProps)
   const [localQueueForceColorMatch, setLocalQueueForceColorMatch] = useState(printer.queue_force_color_match ?? false);
   const [localSaveAmsMapping, setLocalSaveAmsMapping] = useState(printer.save_ams_mapping ?? false);
   const [localGcodeInjection, setLocalGcodeInjection] = useState(printer.gcode_injection ?? false);
+  const [localQueueAutoBatch, setLocalQueueAutoBatch] = useState(printer.queue_auto_batch ?? false);
   const [localTailscaleDisabled, setLocalTailscaleDisabled] = useState(printer.tailscale_disabled ?? true);
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export function VirtualPrinterCard({ printer, models }: VirtualPrinterCardProps)
       setLocalQueueForceColorMatch(printer.queue_force_color_match ?? false);
       setLocalSaveAmsMapping(printer.save_ams_mapping ?? false);
       setLocalGcodeInjection(printer.gcode_injection ?? false);
+      setLocalQueueAutoBatch(printer.queue_auto_batch ?? false);
       setLocalTailscaleDisabled(printer.tailscale_disabled ?? true);
     }
   }, [printer, pendingAction]);
@@ -141,6 +143,7 @@ export function VirtualPrinterCard({ printer, models }: VirtualPrinterCardProps)
       setLocalQueueForceColorMatch(printer.queue_force_color_match ?? false);
       setLocalSaveAmsMapping(printer.save_ams_mapping ?? false);
       setLocalGcodeInjection(printer.gcode_injection ?? false);
+      setLocalQueueAutoBatch(printer.queue_auto_batch ?? false);
       setPendingAction(null);
     },
   });
@@ -528,6 +531,36 @@ export function VirtualPrinterCard({ printer, models }: VirtualPrinterCardProps)
                     <span
                       className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
                         localGcodeInjection ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Auto-batch a multi-plate Send All - only for queue mode */}
+            {localMode === 'queue' && (
+              <div className="pt-2 border-t border-bambu-dark-tertiary">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-white text-sm font-medium">{t('virtualPrinter.queueAutoBatch.title')}</div>
+                    <div className="text-[10px] text-bambu-gray">{t('virtualPrinter.queueAutoBatch.description')}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newVal = !localQueueAutoBatch;
+                      setLocalQueueAutoBatch(newVal);
+                      setPendingAction('queueAutoBatch');
+                      updateMutation.mutate({ queue_auto_batch: newVal });
+                    }}
+                    disabled={pendingAction === 'queueAutoBatch'}
+                    className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                      localQueueAutoBatch ? 'bg-bambu-green' : 'bg-bambu-dark-tertiary'
+                    } ${pendingAction === 'queueAutoBatch' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                        localQueueAutoBatch ? 'translate-x-5' : ''
                       }`}
                     />
                   </button>
