@@ -420,6 +420,16 @@ def get_rod_type(model: str | None) -> str | None:
 GCODE_COMPAT_FAMILIES = (frozenset(["X1", "X1C", "X1E", "P1P", "P1S"]),)
 
 
+def _model_key(model: str) -> str:
+    """Comparison key for a model name.
+
+    Internal codes (e.g. "C11") resolve to short names first, so "C11" vs
+    "X1C" compares equal instead of leaning on family membership.
+    """
+    resolved = PRINTER_MODEL_ID_MAP.get(model.strip(), model)
+    return resolved.strip().upper().replace(" ", "").replace("-", "")
+
+
 def is_gcode_compatible(sliced_for_model: str | None, target_model: str | None) -> bool:
     """Return True when G-code sliced for one model may be dispatched to the other.
 
@@ -430,17 +440,79 @@ def is_gcode_compatible(sliced_for_model: str | None, target_model: str | None) 
     if not sliced_for_model or not target_model:
         return True
 
-    def _norm(model: str) -> str:
-        # Internal codes (e.g. "C11") → short names first, so "C11" vs "X1C"
-        # compares equal instead of leaning on family membership.
-        resolved = PRINTER_MODEL_ID_MAP.get(model.strip(), model)
-        return resolved.strip().upper().replace(" ", "").replace("-", "")
-
-    a = _norm(sliced_for_model)
-    b = _norm(target_model)
+    a = _model_key(sliced_for_model)
+    b = _model_key(target_model)
     if a == b:
         return True
     return any(a in family and b in family for family in GCODE_COMPAT_FAMILIES)
+
+
+def compatible_models(model: str | None) -> list[str]:
+    """Other models whose jobs *model* is allowed to be opted in to.
+
+    The menu behind a printer's accepted-models list: family siblings only,
+    its own model excluded. Family entries are already short display names,
+    so they are returned as written.
+    """
+    if not model:
+        return []
+    key = _model_key(model)
+    return sorted(m for family in GCODE_COMPAT_FAMILIES if key in family for m in family if m != key)
+
+
+def validate_accepted_models(printer_model: str | None, values: list[str] | None) -> list[str]:
+    """Normalize a printer's accepted-models opt-in list.
+
+    Entries are canonicalised to short display names, deduplicated, and the
+    printer's own model is dropped — it always accepts its own jobs, and
+    storing it would make the list look like it grants something it doesn't.
+
+    Raises:
+        ValueError: an entry is not G-code interchangeable with the printer's
+            own model, which would dispatch a job onto hardware it was not
+            sliced for.
+    """
+    if not values:
+        return []
+    if not printer_model:
+        raise ValueError("Set the printer's model before choosing which other models it accepts")
+    allowed = {_model_key(m): m for m in compatible_models(printer_model)}
+    own = _model_key(printer_model)
+    accepted: list[str] = []
+    for raw in values:
+        name = normalize_printer_model(raw)
+        if not name:
+            continue
+        key = _model_key(name)
+        if key == own:
+            continue
+        if key not in allowed:
+            raise ValueError(f"{name} prints are not interchangeable with {printer_model}")
+        if allowed[key] not in accepted:
+            accepted.append(allowed[key])
+    return accepted
+
+
+def printer_accepts_model(
+    printer_model: str | None,
+    accepted_models: list[str] | None,
+    target_model: str | None,
+) -> bool:
+    """Return True when a job targeted at *target_model* may run on this printer.
+
+    Its own model always, plus whatever the user opted it in to. The opt-in is
+    re-checked against the interchange family here rather than trusted: a row
+    written before the validator existed, or through a direct API write, must
+    not be able to widen what the scheduler will dispatch.
+    """
+    if not printer_model or not target_model:
+        return False
+    target_key = _model_key(target_model)
+    if _model_key(printer_model) == target_key:
+        return True
+    return any(_model_key(m) == target_key for m in accepted_models or []) and is_gcode_compatible(
+        target_model, printer_model
+    )
 
 
 def normalize_printer_model_id(model_id: str | None) -> str | None:

@@ -356,6 +356,10 @@ export default {
     name: 'Ad',
     serialCannotBeChanged: 'Seri numarası değiştirilemez',
     locationHelp: 'Yazıcıları gruplamak ve kuyruk işlerini filtrelemek için kullanılır',
+    acceptedModels: {
+      label: 'Şu modellerin işlerini de kabul et',
+      help: 'Bu modelleri hedefleyen kuyruk işleri bu yazıcıda çalışabilir. Yalnızca G-code\'u değiştirilebilir modeller sunulur.',
+    },
     // WiFi sinyal gücü
     wifiSignal: {
       veryWeak: 'Çok zayıf',

@@ -356,6 +356,10 @@ export default {
     name: '名稱',
     serialCannotBeChanged: '序列號無法更改',
     locationHelp: '用於分組印表機和篩選佇列任務',
+    acceptedModels: {
+      label: '同時接受以下機型的工作',
+      help: '指定這些機型的佇列工作可在此印表機上執行。僅提供 G-code 可互換的機型。',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: '非常弱',

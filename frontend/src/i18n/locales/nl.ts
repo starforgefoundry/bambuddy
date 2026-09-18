@@ -356,6 +356,10 @@ export default {
     name: 'Naam',
     serialCannotBeChanged: 'Serienummer kan niet worden gewijzigd',
     locationHelp: 'Gebruikt om printers te groeperen en wachtrijtaken te filteren',
+    acceptedModels: {
+      label: 'Accepteer ook taken voor',
+      help: 'Wachtrijtaken voor deze modellen mogen op deze printer draaien. Alleen modellen met uitwisselbare G-code worden aangeboden.',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: 'Zeer zwak',
