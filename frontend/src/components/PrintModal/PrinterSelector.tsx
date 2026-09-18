@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { api, type PrinterStatus } from '../../api/client';
 import { getColorName } from '../../utils/colors';
-import { isGcodeCompatible } from '../../utils/printer';
+import { isGcodeCompatible, printerAcceptsModel } from '../../utils/printer';
 import {
   normalizeColorForCompare,
   colorsAreSimilar,
@@ -287,8 +287,9 @@ export function PrinterSelector({
     if (assignmentMode !== 'printer' || !slicedForModel || showAllPrinters) {
       return activePrinters;
     }
-    // Filter to only show printers matching the sliced model
-    const matching = activePrinters.filter((p) => p.model === slicedForModel);
+    // Filter to only show printers that will run the sliced model — its own,
+    // plus any opted in to it.
+    const matching = activePrinters.filter((p) => printerAcceptsModel(p, slicedForModel));
     // If no matching printers, show all
     return matching.length > 0 ? matching : activePrinters;
   }, [activePrinters, assignmentMode, slicedForModel, showAllPrinters]);
@@ -296,10 +297,12 @@ export function PrinterSelector({
   // Check if there are hidden printers due to model filtering
   const hiddenPrinterCount = activePrinters.length - displayPrinters.length;
 
-  // Get unique models from available printers (for model-based assignment)
+  // Models the queue can target: every printer's own model plus the ones it
+  // has been opted in to accepting. Without the opt-ins a farm of one X1C
+  // could not pick "Any P1S" at all, even with the X1C set to take them.
   const uniqueModels = useMemo(() => {
     const models = activePrinters
-      .map(p => p.model)
+      .flatMap(p => [p.model, ...(p.accepted_models ?? [])])
       .filter((m): m is string => Boolean(m));
     return [...new Set(models)].sort();
   }, [activePrinters]);
@@ -308,7 +311,7 @@ export function PrinterSelector({
   const uniqueLocations = useMemo(() => {
     if (!targetModel) return [];
     const locations = activePrinters
-      .filter(p => p.model === targetModel && p.location)
+      .filter(p => printerAcceptsModel(p, targetModel) && p.location)
       .map(p => p.location)
       .filter((l): l is string => Boolean(l));
     return [...new Set(locations)].sort();

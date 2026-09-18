@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import HTTPException
-from sqlalchemy import delete, false, func, or_, select, true, update
+from sqlalchemy import delete, false, or_, select, true, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -66,6 +66,7 @@ from backend.app.utils.printer_models import (
     is_gcode_compatible,
     is_nozzle_rack_model,
     normalize_printer_model,
+    printer_accepts_model,
 )
 from backend.app.utils.threemf_tools import (
     extract_rack_plan_from_3mf,
@@ -2112,22 +2113,35 @@ class PrintScheduler:
         model: str,
         target_location: str | None = None,
     ) -> list[Printer]:
-        """Active printers of *model*, optionally narrowed to one location.
+        """Active printers that will run *model*'s jobs, optionally narrowed to
+        one location.
+
+        That is the printers of *model* itself plus any the user has opted in
+        to it via ``accepted_models`` — a farm that slices everything for one
+        model can still run those jobs on an interchangeable machine. Printers
+        of the model itself sort first, so an opted-in sibling is only taken
+        when none of the real thing is free.
 
         Shared by the matcher and by the smart-plug wake step (#2786) so both
-        answer "which printers can this job run on" from one query — a job can
-        only be woken onto a printer the matcher would also have considered.
+        answer "which printers can this job run on" one way — a job can only be
+        woken onto a printer the matcher would also have considered.
+
+        The opt-in is matched in Python rather than SQL: it is a JSON list, and
+        there is no containment operator SQLite and Postgres both spell the
+        same way.
         """
         normalized_model = normalize_printer_model(model) or model
-        query = (
-            select(Printer)
-            .where(func.lower(Printer.model) == normalized_model.lower())
-            .where(Printer.is_active == True)  # noqa: E712
-        )
+        query = select(Printer).where(Printer.is_active == True)  # noqa: E712
         if target_location:
             query = query.where(Printer.location == target_location)
         result = await db.execute(query)
-        return list(result.scalars().all())
+        printers = [
+            p for p in result.scalars().all() if printer_accepts_model(p.model, p.accepted_models, normalized_model)
+        ]
+        printers.sort(
+            key=lambda p: ((normalize_printer_model(p.model) or "").lower() != normalized_model.lower(), p.id)
+        )
+        return printers
 
     async def _wakeable_printer_ids(self, db: AsyncSession) -> set[int]:
         """Printer IDs that at least one enabled ``auto_on`` plug can power on.
@@ -2200,7 +2214,7 @@ class PrintScheduler:
                 continue
             required_types, filament_overrides = _filament_constraints(candidate)
             printers = await self._printers_for_model(db, candidate.target_model, target_location)
-            for printer in sorted(printers, key=lambda p: p.id):
+            for printer in printers:
                 if printer.id in exclude_ids or printer.id not in wakeable_ids:
                     continue
                 if printer_manager.is_connected(printer.id):

@@ -340,6 +340,10 @@ export default {
     name: '이름',
     serialCannotBeChanged: '일련번호는 변경할 수 없습니다',
     locationHelp: '프린터 그룹화 및 대기열 작업 필터링에 사용됩니다',
+    acceptedModels: {
+      label: '추가로 수락할 모델',
+      help: '이 모델을 대상으로 하는 대기열 작업을 이 프린터에서 실행할 수 있습니다. G-code가 호환되는 모델만 표시됩니다.',
+    },
     wifiSignal: {
       veryWeak: '매우 약함',
       weak: '약함',

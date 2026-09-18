@@ -55,6 +55,7 @@ from backend.app.services.print_batch import (
 from backend.app.services.print_cost_estimate import estimate_queue_source_cost
 from backend.app.utils.printer_models import (
     is_gcode_compatible,
+    printer_accepts_model,
 )
 from backend.app.utils.threemf_tools import (
     extract_plate_metadata_from_3mf,
@@ -626,21 +627,24 @@ async def list_queue(
             # Resolve effective model: prefer explicit param, fall back to printer's DB model.
             # This ensures model-based "Any X" items are returned even when the frontend
             # doesn't send target_model (e.g. printer.model is NULL on the client side).
-            effective_model = target_model
-            if not effective_model:
-                printer_row = (
-                    await db.execute(select(Printer.model).where(Printer.id == printer_id))
-                ).scalar_one_or_none()
-                effective_model = printer_row
+            printer_row = (
+                await db.execute(select(Printer.model, Printer.accepted_models).where(Printer.id == printer_id))
+            ).first()
+            effective_model = target_model or (printer_row.model if printer_row else None)
 
-            if effective_model:
+            # Every model this printer will take work for, not just its own: an
+            # X1C opted in to "Any P1S" runs those jobs, so hiding them from its
+            # card would leave the user watching a queue that looks empty.
+            accepted = (printer_row.accepted_models if printer_row else None) or []
+            served = [m.lower() for m in [effective_model, *accepted] if m]
+            if served:
                 # Include both printer-specific items AND model-based (unassigned) items
                 query = query.where(
                     or_(
                         PrintQueueItem.printer_id == printer_id,
                         and_(
                             PrintQueueItem.printer_id.is_(None),
-                            func.lower(PrintQueueItem.target_model) == effective_model.lower(),
+                            func.lower(PrintQueueItem.target_model).in_(served),
                         ),
                     )
                 )
@@ -654,6 +658,17 @@ async def list_queue(
     result = await db.execute(query)
     items = result.scalars().all()
     return [_enrich_response(item) for item in items]
+
+
+async def _has_active_printer_for_model(db: AsyncSession, model: str) -> bool:
+    """Whether any active printer would run a job targeted at *model*.
+
+    Printers of that model, plus any opted in to it — the same rule the
+    scheduler matches by. Asking only for an exact model match would reject a
+    job at queue time that the scheduler would happily have dispatched.
+    """
+    result = await db.execute(select(Printer).where(Printer.is_active == True))  # noqa: E712
+    return any(printer_accepts_model(p.model, p.accepted_models, model) for p in result.scalars())
 
 
 async def _resolve_queue_variants(
@@ -726,16 +741,7 @@ async def _resolve_queue_variants(
             )
         seen_models[model] = library_file.filename
 
-        has_printer = (
-            (
-                await db.execute(
-                    select(Printer).where(Printer.model == model).where(Printer.is_active == True)  # noqa: E712
-                )
-            )
-            .scalars()
-            .first()
-        )
-        any_active_printer = any_active_printer or bool(has_printer)
+        any_active_printer = any_active_printer or await _has_active_printer_for_model(db, model)
 
         resolved.append((spec, library_file, model))
 
@@ -853,12 +859,8 @@ async def add_to_queue(
     # Validate target_model has active printers. Skipped for cross-model items:
     # target_model there is just the first candidate, and _resolve_queue_variants
     # has already required that *some* candidate has a printer.
-    if target_model_norm and not data.variants:
-        result = await db.execute(
-            select(Printer).where(Printer.model == target_model_norm).where(Printer.is_active == True)  # noqa: E712
-        )
-        if not result.scalars().first():
-            raise HTTPException(400, f"No active printers for model: {target_model_norm}")
+    if target_model_norm and not data.variants and not await _has_active_printer_for_model(db, target_model_norm):
+        raise HTTPException(400, f"No active printers for model: {target_model_norm}")
 
     # Validate archive exists (if provided) and get it for filament extraction
     archive = None
@@ -1952,10 +1954,7 @@ async def update_queue_item(
 
     # Validate target_model has active printers
     if "target_model" in update_data and update_data["target_model"]:
-        result = await db.execute(
-            select(Printer).where(Printer.model == update_data["target_model"]).where(Printer.is_active == True)  # noqa: E712
-        )
-        if not result.scalars().first():
+        if not await _has_active_printer_for_model(db, update_data["target_model"]):
             raise HTTPException(400, f"No active printers for model: {update_data['target_model']}")
 
         # Cross-model safety gate (#2578) — same check as the create route, so

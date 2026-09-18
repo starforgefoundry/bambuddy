@@ -356,6 +356,10 @@ export default {
     name: 'Name',
     serialCannotBeChanged: 'Serial number cannot be changed',
     locationHelp: 'Used to group printers and filter queue jobs',
+    acceptedModels: {
+      label: 'Also accept jobs for',
+      help: 'Queue jobs targeting these models can run on this printer. Only models whose G-code is interchangeable are offered.',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: 'Very weak',

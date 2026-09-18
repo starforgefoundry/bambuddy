@@ -356,6 +356,10 @@ export default {
     name: 'Name',
     serialCannotBeChanged: 'Seriennummer kann nicht geändert werden',
     locationHelp: 'Dient zur Gruppierung von Druckern und zum Filtern von Warteschlangenaufträgen',
+    acceptedModels: {
+      label: 'Aufträge auch annehmen für',
+      help: 'Warteschlangenaufträge für diese Modelle dürfen auf diesem Drucker laufen. Angeboten werden nur Modelle mit austauschbarem G-Code.',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: 'Sehr schwach',

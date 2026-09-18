@@ -4957,6 +4957,12 @@ async def run_migrations(conn):
     # Spoolman and the location sync then imported as storage locations.
     await _migrate_drop_ams_slot_locations(conn)
 
+    # Migration: per-printer opt-in to another model's queued jobs, so a farm
+    # that slices everything for one model can still run it on an
+    # interchangeable machine. NULL means "own model only". JSON is spelled
+    # identically on SQLite and Postgres.
+    await _safe_execute(conn, "ALTER TABLE printers ADD COLUMN accepted_models JSON")
+
 
 async def _migrate_rename_ha_sensor_alert_template(conn) -> None:
     """Rename the ha_sensor_alert template to "Printer Sensor Alert" (#2824).

@@ -177,7 +177,7 @@ import { PrintModal } from '../components/PrintModal';
 import { PrinterInfoModal } from '../components/PrinterInfoModal';
 import { FeedDirectionModal } from '../components/FeedDirectionModal';
 import { getAmsLabel, getGlobalTrayId, getFillBarColor, getSpoolmanFillLevel, getFallbackSpoolTag, installedNozzleDiameters, isBambuLabSpool, resolveSlotNozzleDiameter, resolveSlotExtruder, formatSlotLabel, slotPresetDescribesTray, FTS_INLET_SIDE } from '../utils/amsHelpers';
-import { MAX_CHAMBER_TEMP_C, getPrinterImage, getWifiStrength, filterCompatibleQueueItems, isPrinterCurrentlyDispatchable } from '../utils/printer';
+import { MAX_CHAMBER_TEMP_C, compatibleModelsFor, getPrinterImage, getWifiStrength, filterCompatibleQueueItems, isPrinterCurrentlyDispatchable } from '../utils/printer';
 import { FilamentSlotCircle } from '../components/FilamentSlotCircle';
 import { Collapsible } from '../components/Collapsible';
 import { ConnectionDiagnosticModal, DiagnosticChecklist } from '../components/ConnectionDiagnostic';
@@ -8382,10 +8382,16 @@ function EditPrinterModal({
     ip_address: printer.ip_address,
     access_code: '',
     model: printer.model || '',
+    accepted_models: printer.accepted_models ?? [],
     location: printer.location || '',
     auto_archive: printer.auto_archive,
     is_active: printer.is_active,
   });
+
+  // Opting a printer in to another model's queue jobs is only offered inside
+  // the G-code interchange family; changing the model above re-derives the
+  // list and drops anything the new model can't run.
+  const acceptableModels = compatibleModelsFor(form.model);
 
   // Setup-time pre-flight — same warn-on-save as the Add-Printer dialog, so an
   // edit that breaks connectivity (e.g. a mistyped IP) is caught before save.
@@ -8416,6 +8422,7 @@ function EditPrinterModal({
       name: form.name,
       ip_address: form.ip_address,
       model: form.model || undefined,
+      accepted_models: form.accepted_models.filter((m) => acceptableModels.includes(m)),
       location: form.location || undefined,
       auto_archive: form.auto_archive,
       is_active: form.is_active,
@@ -8536,6 +8543,32 @@ function EditPrinterModal({
                 </optgroup>
               </select>
             </div>
+            {acceptableModels.length > 0 && (
+              <div>
+                <label className="block text-sm text-bambu-gray mb-1">{t('printers.acceptedModels.label')}</label>
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {acceptableModels.map((model) => (
+                    <label key={model} className="flex items-center gap-2 text-sm text-white">
+                      <input
+                        type="checkbox"
+                        checked={form.accepted_models.includes(model)}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            accepted_models: e.target.checked
+                              ? [...form.accepted_models, model]
+                              : form.accepted_models.filter((m) => m !== model),
+                          })
+                        }
+                        className="rounded border-bambu-dark-tertiary bg-bambu-dark text-bambu-green focus:ring-bambu-green"
+                      />
+                      {model}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-bambu-gray mt-1">{t('printers.acceptedModels.help')}</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm text-bambu-gray mb-1">Location / Group</label>
               <input

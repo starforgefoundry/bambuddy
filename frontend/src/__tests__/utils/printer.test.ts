@@ -8,7 +8,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getPrinterImage, isGcodeCompatible, filterCompatibleQueueItems } from '../../utils/printer';
+import {
+  compatibleModelsFor,
+  getPrinterImage,
+  isGcodeCompatible,
+  filterCompatibleQueueItems,
+  printerAcceptsModel,
+} from '../../utils/printer';
 import type { PrintQueueItem } from '../../api/client';
 
 describe('getPrinterImage', () => {
@@ -135,6 +141,41 @@ describe('isGcodeCompatible', () => {
     expect(isGcodeCompatible('x1c', 'X1C')).toBe(true);
     expect(isGcodeCompatible('A1 Mini', 'A1-MINI')).toBe(true);
     expect(isGcodeCompatible('H2D Pro', 'H2DPRO')).toBe(true);
+  });
+});
+
+describe('compatibleModelsFor', () => {
+  it('offers the family siblings a printer can be opted in to', () => {
+    expect(compatibleModelsFor('X1C')).toEqual(['P1P', 'P1S', 'X1', 'X1E']);
+    expect(compatibleModelsFor('P1S')).toEqual(['P1P', 'X1', 'X1C', 'X1E']);
+  });
+
+  it('offers nothing for a model with no interchangeable sibling', () => {
+    expect(compatibleModelsFor('H2D')).toEqual([]);
+    expect(compatibleModelsFor('A1 Mini')).toEqual([]);
+    expect(compatibleModelsFor(null)).toEqual([]);
+  });
+});
+
+describe('printerAcceptsModel', () => {
+  it('accepts its own model with no opt-ins at all', () => {
+    expect(printerAcceptsModel({ model: 'X1C', accepted_models: [] }, 'X1C')).toBe(true);
+    expect(printerAcceptsModel({ model: 'X1C' }, 'x1c')).toBe(true);
+  });
+
+  it('accepts a model it was opted in to', () => {
+    expect(printerAcceptsModel({ model: 'X1C', accepted_models: ['P1S'] }, 'P1S')).toBe(true);
+    expect(printerAcceptsModel({ model: 'X1C', accepted_models: ['P1S'] }, 'P1P')).toBe(false);
+    expect(printerAcceptsModel({ model: 'X1C', accepted_models: [] }, 'P1S')).toBe(false);
+  });
+
+  it('ignores an opt-in outside the interchange family', () => {
+    expect(printerAcceptsModel({ model: 'X1C', accepted_models: ['H2D'] }, 'H2D')).toBe(false);
+  });
+
+  it('matches nothing when either model is unknown', () => {
+    expect(printerAcceptsModel({ model: null, accepted_models: ['P1S'] }, 'P1S')).toBe(false);
+    expect(printerAcceptsModel({ model: 'X1C' }, null)).toBe(false);
   });
 });
 

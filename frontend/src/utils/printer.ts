@@ -48,6 +48,33 @@ export function isGcodeCompatible(
   return GCODE_COMPAT_FAMILIES.some((family) => family.has(a) && family.has(b));
 }
 
+/** Other models a printer of this model can be opted in to accepting jobs for.
+ *  Mirrors backend printer_models.compatible_models. */
+export function compatibleModelsFor(model: string | null | undefined): string[] {
+  if (!model) return [];
+  const norm = (m: string) => m.trim().toUpperCase().replace(/[\s-]/g, '');
+  const key = norm(model);
+  return GCODE_COMPAT_FAMILIES.flatMap((family) =>
+    family.has(key) ? [...family].filter((m) => m !== key) : []
+  ).sort();
+}
+
+/** True when a job targeted at `targetModel` may run on this printer — its own
+ *  model, or one the user opted it in to. Mirrors backend printer_accepts_model. */
+export function printerAcceptsModel(
+  printer: { model: string | null; accepted_models?: string[] },
+  targetModel: string | null | undefined,
+): boolean {
+  if (!printer.model || !targetModel) return false;
+  const norm = (m: string) => m.trim().toUpperCase().replace(/[\s-]/g, '');
+  const target = norm(targetModel);
+  if (norm(printer.model) === target) return true;
+  return (
+    (printer.accepted_models ?? []).some((m) => norm(m) === target) &&
+    isGcodeCompatible(targetModel, printer.model)
+  );
+}
+
 export function getWifiStrength(rssi: number): { labelKey: string; color: string; bars: number } {
   if (rssi >= -50) return { labelKey: 'printers.wifiSignal.excellent', color: 'text-bambu-green', bars: 4 };
   if (rssi >= -60) return { labelKey: 'printers.wifiSignal.good', color: 'text-bambu-green', bars: 3 };

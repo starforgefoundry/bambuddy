@@ -356,6 +356,10 @@ export default {
     name: '名称',
     serialCannotBeChanged: '序列号无法更改',
     locationHelp: '用于分组打印机和筛选队列任务',
+    acceptedModels: {
+      label: '同时接受以下机型的任务',
+      help: '面向这些机型的队列任务可在此打印机上运行。仅提供 G-code 可互换的机型。',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: '非常弱',

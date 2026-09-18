@@ -356,6 +356,10 @@ export default {
     name: 'Nombre',
     serialCannotBeChanged: 'El número de serie no se puede cambiar',
     locationHelp: 'Se usa para agrupar impresoras y filtrar trabajos en cola',
+    acceptedModels: {
+      label: 'Aceptar también trabajos de',
+      help: 'Los trabajos en cola dirigidos a estos modelos pueden ejecutarse en esta impresora. Solo se ofrecen modelos con G-code intercambiable.',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: 'Muy débil',

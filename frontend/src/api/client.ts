@@ -359,6 +359,10 @@ export interface Printer {
   // API keys receive a Printer without this field.
   access_code?: string;
   model: string | null;
+  // Other models whose "Any <model>" queue jobs this printer also takes —
+  // empty unless the user opted it in. Family members only (see
+  // isGcodeCompatible); the scheduler matches on model + this list.
+  accepted_models: string[];
   location: string | null;  // Group/location name
   nozzle_count: number;  // 1 or 2, auto-detected from MQTT
   // Model is sold with both Standard and High Flow nozzles, so a K-profile's
@@ -662,6 +666,9 @@ export interface PrinterCreate {
   ip_address: string;
   access_code: string;
   model?: string;
+  // Other models whose "Any <model>" queue jobs this printer also takes.
+  // Backend rejects anything outside the model's G-code interchange family.
+  accepted_models?: string[];
   location?: string;
   auto_archive?: boolean;
   // Maintenance Mode flag (#1476). Backend already gates MQTT, queue dispatch,

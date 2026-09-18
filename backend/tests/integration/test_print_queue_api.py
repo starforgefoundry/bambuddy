@@ -2038,6 +2038,39 @@ class TestTargetLocationFeature:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    async def test_add_to_queue_counts_printers_opted_in_to_the_target_model(
+        self, async_client: AsyncClient, printer_factory, archive_factory, db_session
+    ):
+        """A farm slicing everything for the P1S, with one X1C set to accept
+        those jobs: "Any P1S" must queue even though no P1S is configured."""
+        await printer_factory(model="X1C", accepted_models=["P1S"])
+        archive = await archive_factory(sliced_for_model="P1S")
+
+        response = await async_client.post(
+            "/api/v1/queue/",
+            json={"target_model": "P1S", "archive_id": archive.id},
+        )
+        assert response.status_code == 200
+        assert response.json()["target_model"] == "P1S"
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_add_to_queue_rejects_a_model_no_printer_will_run(
+        self, async_client: AsyncClient, printer_factory, archive_factory, db_session
+    ):
+        """Without the opt-in the same farm has nothing to run a P1S job on."""
+        await printer_factory(model="X1C")
+        archive = await archive_factory(sliced_for_model="P1S")
+
+        response = await async_client.post(
+            "/api/v1/queue/",
+            json={"target_model": "P1S", "archive_id": archive.id},
+        )
+        assert response.status_code == 400
+        assert "No active printers for model: P1S" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_add_to_queue_without_sliced_metadata_not_blocked(
         self, async_client: AsyncClient, printer_factory, archive_factory, db_session
     ):

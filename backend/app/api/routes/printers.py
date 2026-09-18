@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, Response
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
 
@@ -93,7 +93,12 @@ from backend.app.utils.filament_types import printer_filament_type
 from backend.app.utils.fts_routing import slot_extruder
 from backend.app.utils.http import build_content_disposition, download_error_response, safe_download_filename
 from backend.app.utils.kprofile_lookup import build_slot_k_resolver
-from backend.app.utils.printer_models import MAX_CHAMBER_TEMP_C, uses_exhaust_fan_label
+from backend.app.utils.printer_models import (
+    MAX_CHAMBER_TEMP_C,
+    printer_accepts_model,
+    uses_exhaust_fan_label,
+    validate_accepted_models,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/printers", tags=["printers"])
@@ -189,7 +194,13 @@ async def create_printer(
             },
         )
 
-    printer = Printer(**printer_data.model_dump())
+    fields = printer_data.model_dump()
+    try:
+        fields["accepted_models"] = validate_accepted_models(fields.get("model"), fields.get("accepted_models"))
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+    printer = Printer(**fields)
     db.add(printer)
     await db.commit()
     await db.refresh(printer)
@@ -235,14 +246,17 @@ async def get_available_filaments(
     # Normalize model name
     normalized_model = normalize_printer_model(model) or normalize_printer_model_id(model) or model
 
-    query = (
-        select(Printer).where(func.lower(Printer.model) == normalized_model.lower()).where(Printer.is_active == True)  # noqa: E712
-    )
+    query = select(Printer).where(Printer.is_active == True)  # noqa: E712
     if location:
         query = query.where(Printer.location == location)
 
     result = await db.execute(query)
-    printers_list = list(result.scalars().all())
+    # Printers opted in to this model count too, or the overrides offered for
+    # an "Any P1S" job would come up empty on a farm whose only P1S-capable
+    # machine is an X1C. Matches the scheduler's _printers_for_model.
+    printers_list = [
+        p for p in result.scalars().all() if printer_accepts_model(p.model, p.accepted_models, normalized_model)
+    ]
 
     if not printers_list:
         return []
@@ -396,6 +410,21 @@ async def update_printer(
             update_data["plate_detection_roi_y"] = None
             update_data["plate_detection_roi_w"] = None
             update_data["plate_detection_roi_h"] = None
+
+    # The opt-in list and the model it is checked against can both move in one
+    # PATCH, so validate against whichever model the printer ends up with. A
+    # model change on its own can strand entries that were legal under the old
+    # one — those are dropped rather than failing the save, since the user was
+    # editing the model, not the list.
+    if "accepted_models" in update_data or "model" in update_data:
+        new_model = update_data.get("model", printer.model)
+        requested = update_data.get("accepted_models", printer.accepted_models)
+        try:
+            update_data["accepted_models"] = validate_accepted_models(new_model, requested)
+        except ValueError as e:
+            if "accepted_models" in update_data:
+                raise HTTPException(400, str(e)) from e
+            update_data["accepted_models"] = []
 
     for field, value in update_data.items():
         setattr(printer, field, value)

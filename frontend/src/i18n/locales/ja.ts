@@ -355,6 +355,10 @@ export default {
     name: '名前',
     serialCannotBeChanged: 'シリアル番号は変更できません',
     locationHelp: 'プリンターのグループ化とキュージョブのフィルタリングに使用',
+    acceptedModels: {
+      label: '受け入れる他の機種',
+      help: 'これらの機種向けのキュージョブをこのプリンターで実行できます。G-code に互換性のある機種のみ選択できます。',
+    },
     // WiFi signal strength
     wifiSignal: {
       veryWeak: '非常に弱い',
