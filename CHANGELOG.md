@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.5.2] - 2026-09-18
+
+### Added
+- **A virtual printer can group a multi-plate "Send All" into one batch** — the VP queue path has split a Send All into one queue item per plate since #1733, but left them unrelated, so a three-plate upload read as three unconnected jobs while the same three plates sent from Bambuddy's own Print modal arrived as a batch. New per-VP toggle *Group Send All as a batch* (queue mode, off by default) closes that gap: the upload creates one batch named `<print name> · N plates` against the shared archive, carrying per-plate targets so a failed plate still reads as owed (#342) rather than the order quietly under-delivering. A single-plate Send is never batched — a batch of one says nothing the queue row doesn't. Toggling it restarts the VP instance, so turning it off takes effect on the next upload instead of at the next process restart.
+
 ## [1.2.5.5.1] - 2026-09-18
 
 Fork release built on upstream 1.2.5.5 — the trailing number is this fork's
