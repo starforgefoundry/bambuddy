@@ -1,0 +1,130 @@
+name: Release
+
+# Publishes a versioned multi-arch image to this repository's GHCR
+# (ghcr.io/<owner>/bambuddy) when a `v<version>` tag is pushed.
+#
+# Same shape as docker-publish.sh — one image per architecture, then a manifest
+# tying them together — except each architecture builds on a runner of its own
+# kind. QEMU-emulating an arm64 pip install turns a ten-minute build into an
+# hour-long one.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    name: Verify version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag_latest: ${{ steps.version.outputs.tag_latest }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # The tag names the image; APP_VERSION is what the running app reports on
+      # its System page and to the update check. Shipping an image where those
+      # two disagree gives a user no way to tell what they are running, so the
+      # release stops here rather than at the first bug report.
+      - name: Tag must match APP_VERSION
+        id: version
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          app_version="$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' backend/app/core/config.py)"
+          if [ "$version" != "$app_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match APP_VERSION $app_version in backend/app/core/config.py"
+            exit 1
+          fi
+          # Beta versions (trailing b / b<n>) never take the `latest` tag.
+          tag_latest=true
+          case "$version" in *b|*b[0-9]*) tag_latest=false ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag_latest=$tag_latest" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version (latest=$tag_latest)"
+
+  build:
+    name: Build ${{ matrix.suffix }}
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.platform }}
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.IMAGE }}:${{ needs.verify.outputs.version }}-${{ matrix.suffix }}
+
+  publish:
+    name: Publish manifest
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG_LATEST: ${{ needs.verify.outputs.tag_latest }}
+        run: |
+          set -euo pipefail
+          tags=(-t "$IMAGE:$VERSION")
+          if [ "$TAG_LATEST" = "true" ]; then
+            tags+=(-t "$IMAGE:latest")
+          fi
+          docker buildx imagetools create "${tags[@]}" \
+            "$IMAGE:$VERSION-amd64" \
+            "$IMAGE:$VERSION-arm64"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+
+      - name: Summary
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          {
+            echo "### Published"
+            echo
+            echo '```'
+            echo "docker pull $IMAGE:$VERSION"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
