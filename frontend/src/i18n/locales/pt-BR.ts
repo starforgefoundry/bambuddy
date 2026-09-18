@@ -5630,6 +5630,10 @@ export default {
       title: 'Injeção de G-code',
       description: 'Aplica os trechos de G-code configurados por modelo nas Configurações aos trabalhos deste VP. Desativado por padrão.',
     },
+    queueAutoBatch: {
+      title: 'Agrupar Enviar tudo como lote',
+      description: 'Enfileira todas as placas de um Enviar tudo com várias placas em um único lote. Um envio de placa única continua sendo um trabalho avulso. Desativado por padrão.',
+    },
     tailscaleDisabled: {
       title: 'Integração Tailscale',
       description: 'Ative para marcar este VP como exposto via Tailscale. Mostra o endereço Tailscale do host para você saber qual IP colar no fatiador. A etapa de importação CA é inalterada — este toggle não afeta certificados.',

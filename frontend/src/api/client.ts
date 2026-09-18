@@ -8356,6 +8356,8 @@ export interface VirtualPrinterConfig {
   queue_force_color_match: boolean;
   save_ams_mapping: boolean;
   gcode_injection: boolean;
+  // Group a multi-plate "Send All" into one batch (queue mode).
+  queue_auto_batch: boolean;
   tailscale_disabled: boolean;
   bind_ip: string | null;
   remote_interface_ip: string | null;
@@ -8384,6 +8386,7 @@ export const multiVirtualPrinterApi = {
     queue_force_color_match?: boolean;
     save_ams_mapping?: boolean;
     gcode_injection?: boolean;
+    queue_auto_batch?: boolean;
     bind_ip?: string;
     remote_interface_ip?: string;
   }) =>
@@ -8403,6 +8406,7 @@ export const multiVirtualPrinterApi = {
     queue_force_color_match?: boolean;
     save_ams_mapping?: boolean;
     gcode_injection?: boolean;
+    queue_auto_batch?: boolean;
     tailscale_disabled?: boolean;
     bind_ip?: string;
     remote_interface_ip?: string;

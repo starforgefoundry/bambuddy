@@ -5641,6 +5641,10 @@ export default {
       title: 'G-code-Injektion',
       description: 'Wendet die in den Einstellungen pro Modell konfigurierten G-code-Snippets auf Jobs dieses VP an. Standardmäßig aus.',
     },
+    queueAutoBatch: {
+      title: 'Send All als Stapel gruppieren',
+      description: 'Stellt alle Platten eines mehrplattigen Send All als einen Stapel in die Warteschlange. Ein Send mit nur einer Platte bleibt ein einzelner Auftrag. Standardmäßig aus.',
+    },
     tailscaleDisabled: {
       title: 'Tailscale-Integration',
       description: 'Aktivieren, um diesen VP als per Tailscale erreichbar zu markieren. Zeigt die Tailscale-Adresse des Hosts an, damit du weißt, welche IP du im Slicer eintragen musst. Der CA-Import bleibt unverändert — diese Option hat keinen Einfluss auf Zertifikate.',

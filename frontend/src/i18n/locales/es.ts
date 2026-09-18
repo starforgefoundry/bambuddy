@@ -5649,6 +5649,10 @@ export default {
       title: 'Inyección de G-code',
       description: 'Aplica los fragmentos de G-code configurados por modelo en Ajustes a los trabajos de esta IV. Desactivado de forma predeterminada.',
     },
+    queueAutoBatch: {
+      title: 'Agrupar Enviar todo como lote',
+      description: 'Pone en cola todas las placas de un Enviar todo multiplaca como un solo lote. Un envío de una sola placa sigue siendo un trabajo suelto. Desactivado de forma predeterminada.',
+    },
     tailscaleDisabled: {
       title: 'Integración con Tailscale',
       description: 'Actívelo para marcar esta IV como expuesta a través de Tailscale. Muestra la dirección de Tailscale del host para que sepa qué IP pegar en el laminador. El paso de importación de la CA no cambia — este interruptor no tiene ningún efecto sobre los certificados.',

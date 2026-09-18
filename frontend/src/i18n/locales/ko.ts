@@ -5377,6 +5377,10 @@ export default {
       title: 'G-code 주입',
       description: '설정에서 모델별로 구성한 G-code 스니펫을 이 가상 프린터의 작업에 적용합니다. 기본값은 꺼짐입니다.'
     },
+    queueAutoBatch: {
+      title: 'Send All을 배치로 묶기',
+      description: '여러 플레이트 Send All의 모든 플레이트를 하나의 배치로 대기열에 추가합니다. 단일 플레이트 전송은 일반 대기열 항목으로 남습니다. 기본값은 꺼짐입니다.'
+    },
     tailscaleDisabled: {
       title: 'Tailscale 통합',
       description: '이 가상 프린터가 Tailscale을 통해 노출되도록 표시하려면 활성화하세요. 슬라이서에 붙여넣을 IP를 알 수 있도록 호스트의 Tailscale 주소를 표시합니다. CA 가져오기 단계는 변경되지 않음 — 이 토글은 인증서에 영향을 미치지 않습니다.'

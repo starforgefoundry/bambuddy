@@ -5642,6 +5642,10 @@ export default {
       title: 'G-codeインジェクション',
       description: '設定でモデルごとに構成したG-codeスニペットを、このVPのジョブに適用します。デフォルトはオフです。',
     },
+    queueAutoBatch: {
+      title: 'Send All をバッチとしてまとめる',
+      description: '複数プレートの Send All のすべてのプレートを1つのバッチとしてキューに追加します。単一プレートの送信は通常のキュー項目のままです。デフォルトはオフです。',
+    },
     tailscaleDisabled: {
       title: 'Tailscale統合',
       description: 'このVPがTailscale経由で公開されていることをマークするには有効にしてください。スライサーに貼り付けるIPがわかるよう、ホストのTailscaleアドレスを表示します。CAインポート手順は変更されません — このトグルは証明書に影響しません。',

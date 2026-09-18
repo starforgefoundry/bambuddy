@@ -5692,6 +5692,10 @@ export default {
       title: 'G-code-injectie',
       description: 'Pas de per model ingestelde G-codefragmenten uit Instellingen toe op taken van deze VP. Standaard uit.',
     },
+    queueAutoBatch: {
+      title: 'Send All als batch groeperen',
+      description: 'Zet alle platen van een Send All met meerdere platen als één batch in de wachtrij. Een verzending met één plaat blijft een losse taak. Standaard uit.',
+    },
     tailscaleDisabled: {
       title: 'Tailscale-integratie',
       description: 'Schakel dit in om deze VP als via Tailscale beschikbaar te markeren. Toont het Tailscale-adres van de host, zodat je weet welk IP-adres je in de slicer moet invoeren. De stap voor het importeren van de CA blijft hetzelfde — deze schakelaar heeft geen invloed op certificaten.',

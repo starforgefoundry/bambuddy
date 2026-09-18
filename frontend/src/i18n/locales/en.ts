@@ -5692,6 +5692,10 @@ export default {
       title: 'G-code injection',
       description: 'Apply the per-model G-code snippets configured in Settings to jobs from this VP. Off by default.',
     },
+    queueAutoBatch: {
+      title: 'Group Send All as a batch',
+      description: 'Queue every plate of a multi-plate Send All under one batch. A single-plate send stays a plain queue item. Off by default.',
+    },
     tailscaleDisabled: {
       title: 'Tailscale integration',
       description: 'Enable to mark this VP as exposed over Tailscale. Shows the host\'s Tailscale address so you know which IP to paste into the slicer. The CA-import step is unchanged — this toggle has no effect on certificates.',

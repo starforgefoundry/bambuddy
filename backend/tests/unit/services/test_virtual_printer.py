@@ -36,6 +36,96 @@ def _write_3mf_with_filaments(file_path: Path, filaments: list[dict], plate_inde
         zf.writestr(f"Metadata/plate_{plate_index}.gcode", "; gcode\n")
 
 
+def _write_send_all_3mf(file_path: Path, plate_count: int) -> None:
+    """Build the 3MF a "Send All" of `plate_count` plates puts on the wire:
+    one zip, one `<plate>` block per plate, one gcode payload per plate."""
+    plates = "".join(
+        f'<plate><metadata key="index" value="{i}"/>'
+        f'<filament id="{i}" type="PLA" color="#000000" used_g="10.0" tray_info_idx=""/>'
+        "</plate>"
+        for i in range(1, plate_count + 1)
+    )
+    with zipfile.ZipFile(file_path, "w") as zf:
+        zf.writestr("Metadata/slice_info.config", f'<?xml version="1.0" encoding="utf-8"?><config>{plates}</config>')
+        for i in range(1, plate_count + 1):
+            zf.writestr(f"Metadata/plate_{i}.gcode", "; gcode\n")
+
+
+def _queue_items(added: list) -> list:
+    """The PrintQueueItems out of everything a recording session captured."""
+    from backend.app.models.print_queue import PrintQueueItem
+
+    return [o for o in added if isinstance(o, PrintQueueItem)]
+
+
+async def _run_send_all(tmp_path: Path, *, plate_count: int, queue_auto_batch: bool) -> list:
+    """Drive one VP queue-mode Send All and return everything it added to the
+    session, in insertion order. Shared by the auto-batch tests below."""
+    from backend.app.services.virtual_printer.manager import VirtualPrinterInstance
+
+    added: list = []
+
+    class _RecordingDb:
+        def __init__(self):
+            self._next_id = 1000
+            self.add = added.append
+            self.commit = AsyncMock()
+
+        async def execute(self, query):  # noqa: ARG002
+            result = MagicMock()
+            result.scalar = MagicMock(return_value=0)
+            return result
+
+        async def flush(self):
+            # Mimic the FK populate so .id is readable right after add().
+            for obj in added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = self._next_id
+                    self._next_id += 1
+
+    session_ctx = AsyncMock()
+    session_ctx.__aenter__ = AsyncMock(return_value=_RecordingDb())
+    session_ctx.__aexit__ = AsyncMock(return_value=False)
+    session_factory = MagicMock(return_value=session_ctx)
+
+    inst = VirtualPrinterInstance(
+        vp_id=77,
+        name="SendAllBatch",
+        mode="queue",
+        model="O1D",
+        access_code="12345678",
+        serial_suffix="391800077",
+        target_printer_id=1,
+        auto_dispatch=False,
+        queue_auto_batch=queue_auto_batch,
+        base_dir=tmp_path,
+        session_factory=session_factory,
+    )
+
+    file_path = tmp_path / "Cube.gcode.3mf"
+    _write_send_all_3mf(file_path, plate_count)
+
+    archive = MagicMock()
+    archive.id = 999
+    archive.printer_id = None
+    archive.filename = "Cube.gcode.3mf"
+    archive.print_name = "Cube"
+    archive.status = "archived"
+
+    with (
+        patch("backend.app.api.routes.settings.get_setting", new_callable=AsyncMock, return_value=None),
+        patch(
+            "backend.app.services.archive.ArchiveService.archive_print",
+            new_callable=AsyncMock,
+            return_value=archive,
+        ),
+        patch("backend.app.core.websocket.ws_manager.send_archive_created", new_callable=AsyncMock),
+    ):
+        await inst._add_to_print_queue(file_path, "192.168.1.100")
+
+    return added
+
+
 class TestVirtualPrinterInstance:
     """Tests for VirtualPrinterInstance class."""
 
@@ -1713,6 +1803,53 @@ class TestVirtualPrinterInstance:
         assert all(q.manual_start for q in added_items)
 
     @pytest.mark.asyncio
+    async def test_send_all_is_grouped_into_one_batch_when_the_vp_opts_in(self, tmp_path):
+        """`queue_auto_batch` on: a 3-plate Send All arrives as one batch of
+        three, the way the Print modal already groups its own multi-plate
+        submissions. Plate targets come with it so a failed plate still reads
+        as owed (#342)."""
+        from backend.app.models.print_batch import PrintBatch, PrintBatchPlate
+
+        added = await _run_send_all(tmp_path, plate_count=3, queue_auto_batch=True)
+
+        batches = [o for o in added if isinstance(o, PrintBatch)]
+        assert len(batches) == 1
+        assert batches[0].name == "Cube · 3 plates"
+        assert batches[0].quantity == 3
+        assert batches[0].archive_id == 999
+
+        targets = [o for o in added if isinstance(o, PrintBatchPlate)]
+        assert [(t.plate_id, t.quantity_target, t.sort_order) for t in targets] == [(1, 1, 0), (2, 1, 1), (3, 1, 2)]
+
+        items = _queue_items(added)
+        assert len(items) == 3
+        assert {i.batch_id for i in items} == {batches[0].id}
+
+    @pytest.mark.asyncio
+    async def test_send_all_stays_ungrouped_when_the_vp_has_not_opted_in(self, tmp_path):
+        """Default off — an upgrader's queue keeps arriving as flat items."""
+        from backend.app.models.print_batch import PrintBatch
+
+        added = await _run_send_all(tmp_path, plate_count=3, queue_auto_batch=False)
+
+        assert not [o for o in added if isinstance(o, PrintBatch)]
+        items = _queue_items(added)
+        assert len(items) == 3
+        assert all(i.batch_id is None for i in items)
+
+    @pytest.mark.asyncio
+    async def test_a_single_plate_send_is_never_batched(self, tmp_path):
+        """A batch of one says nothing the queue row doesn't already say."""
+        from backend.app.models.print_batch import PrintBatch
+
+        added = await _run_send_all(tmp_path, plate_count=1, queue_auto_batch=True)
+
+        assert not [o for o in added if isinstance(o, PrintBatch)]
+        items = _queue_items(added)
+        assert len(items) == 1
+        assert items[0].batch_id is None
+
+    @pytest.mark.asyncio
     async def test_add_to_print_queue_captures_nozzle_mapping(self, tmp_path):
         """#1780: BambuStudio's project_file for H2C rack-swap (O1C2) sends
         per-filament physical nozzle position IDs in `nozzle_mapping`. VP
@@ -3227,6 +3364,7 @@ class TestVirtualPrinterManager:
             "queue_force_color_match": False,  # default — must be explicit so MagicMock truthiness doesn't trip the change detector
             "save_ams_mapping": False,  # same reason as above
             "gcode_injection": False,  # same reason as above
+            "queue_auto_batch": False,  # same reason as above
             "position": 0,
         }
         defaults.update(overrides)
@@ -3452,6 +3590,39 @@ class TestVirtualPrinterManager:
         manager._instances[1] = inst
 
         db_vp = self._make_db_vp(gcode_injection=False)
+        self._setup_sync_mocks(manager, [db_vp], tmp_path)
+
+        with patch.object(manager, "remove_instance", new_callable=AsyncMock) as mock_remove:
+            with patch("backend.app.services.virtual_printer.manager.VirtualPrinterInstance") as MockInst:
+                mock_new = MagicMock()
+                mock_new.start_server = AsyncMock()
+                MockInst.return_value = mock_new
+
+                await manager.sync_from_db()
+
+            mock_remove.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_sync_from_db_restarts_on_queue_auto_batch_toggle(self, manager, tmp_path):
+        """Same reason as the gcode_injection toggle above: the running
+        instance reads its own flag, so turning Send All batching off in the
+        UI would keep grouping until the process restarted."""
+        from backend.app.services.virtual_printer.manager import VirtualPrinterInstance
+
+        inst = VirtualPrinterInstance(
+            vp_id=1,
+            name="TestVP",
+            mode="archive",
+            model="C11",
+            access_code="12345678",
+            serial_suffix="391800001",
+            queue_auto_batch=True,
+            base_dir=tmp_path,
+        )
+        inst.stop_server = AsyncMock()
+        manager._instances[1] = inst
+
+        db_vp = self._make_db_vp(queue_auto_batch=False)
         self._setup_sync_mocks(manager, [db_vp], tmp_path)
 
         with patch.object(manager, "remove_instance", new_callable=AsyncMock) as mock_remove:

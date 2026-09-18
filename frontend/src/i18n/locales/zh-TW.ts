@@ -5630,6 +5630,10 @@ export default {
       title: 'G-code 注入',
       description: '將「設定」中依型號設定的 G-code 片段套用到此 VP 的作業。預設關閉。',
     },
+    queueAutoBatch: {
+      title: '將 Send All 歸為一個批次',
+      description: '把多盤 Send All 的每個盤位作為一個批次加入佇列。單盤傳送仍是一般佇列項目。預設關閉。',
+    },
     tailscaleDisabled: {
       title: 'Tailscale 整合',
       description: '啟用以將此 VP 標記為透過 Tailscale 公開。顯示主機的 Tailscale 位址，以便您知道要貼上到切片器中的 IP。CA 匯入步驟保持不變 — 此切換對憑證無影響。',

@@ -400,6 +400,52 @@ class TestVirtualPrinterGcodeInjectionAPI:
         assert get_resp.json()["gcode_injection"] is True
 
 
+class TestVirtualPrinterQueueAutoBatchAPI:
+    """Integration tests for queue_auto_batch on /api/v1/virtual-printers endpoints."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_create_virtual_printer_queue_auto_batch_default_off(self, async_client: AsyncClient):
+        """Opt-in: an upgrader's Send All keeps arriving as flat queue items."""
+        response = await async_client.post(
+            "/api/v1/virtual-printers",
+            json={
+                "name": "TestDefaultAutoBatch",
+                "mode": "queue",
+                "access_code": "12345678",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["queue_auto_batch"] is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_update_virtual_printer_queue_auto_batch(self, async_client: AsyncClient):
+        """Verify queue_auto_batch can be toggled via PUT and persists."""
+        create_resp = await async_client.post(
+            "/api/v1/virtual-printers",
+            json={
+                "name": "TestToggleAutoBatch",
+                "mode": "queue",
+                "access_code": "12345678",
+            },
+        )
+        assert create_resp.status_code == 200
+        vp_id = create_resp.json()["id"]
+
+        update_resp = await async_client.put(
+            f"/api/v1/virtual-printers/{vp_id}",
+            json={"queue_auto_batch": True},
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["queue_auto_batch"] is True
+
+        get_resp = await async_client.get(f"/api/v1/virtual-printers/{vp_id}")
+        assert get_resp.status_code == 200
+        assert get_resp.json()["queue_auto_batch"] is True
+
+
 class TestVirtualPrinterTailscaleToggleAPI:
     """The Tailscale toggle is informational — toggling either way always succeeds.
 

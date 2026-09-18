@@ -2163,6 +2163,13 @@ async def run_migrations(conn):
     else:
         await _safe_execute(conn, "ALTER TABLE virtual_printers ADD COLUMN gcode_injection BOOLEAN DEFAULT FALSE")
 
+    # Per-VP opt-in for grouping a multi-plate "Send All" into one batch.
+    # Default false so an upgrader's queue keeps arriving as flat items.
+    if is_sqlite():
+        await _safe_execute(conn, "ALTER TABLE virtual_printers ADD COLUMN queue_auto_batch BOOLEAN DEFAULT 0")
+    else:
+        await _safe_execute(conn, "ALTER TABLE virtual_printers ADD COLUMN queue_auto_batch BOOLEAN DEFAULT FALSE")
+
     # Migration: nozzle_mapping + nozzles_info on print_queue for H2C rack-swap
     # slicer-pick preservation (#1780). Opaque JSON-string column carrying
     # BambuStudio's per-filament physical nozzle position IDs, forwarded

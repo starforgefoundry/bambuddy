@@ -5605,6 +5605,10 @@ export default {
       title: 'G-code enjeksiyonu',
       description: "Ayarlar'da model bazında yapılandırılan G-code parçacıklarını bu VP'nin işlerine uygular. Varsayılan olarak kapalı.",
     },
+    queueAutoBatch: {
+      title: "Send All'ı toplu iş olarak grupla",
+      description: "Çok plakalı bir Send All'daki tüm plakaları tek bir toplu iş olarak kuyruğa alır. Tek plakalı gönderim ayrı bir iş olarak kalır. Varsayılan olarak kapalı.",
+    },
     tailscaleDisabled: {
       title: 'Tailscale entegrasyonu',
       description: "Bu VP'yi Tailscale üzerinden açıkta olarak işaretlemek için etkinleştirin. Dilimleyiciye hangi IP'yi yapıştıracağınızı bilmeniz için ana bilgisayarın Tailscale adresini gösterir. CA içe aktarma adımı değişmedi — bu anahtarın sertifikalar üzerinde etkisi yoktur.",

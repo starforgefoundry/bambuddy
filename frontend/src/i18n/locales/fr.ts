@@ -5631,6 +5631,10 @@ export default {
       title: 'Injection G-code',
       description: 'Applique les extraits de G-code configurés par modèle dans les Paramètres aux travaux de ce VP. Désactivé par défaut.',
     },
+    queueAutoBatch: {
+      title: 'Grouper Envoyer tout en lot',
+      description: 'Met en file toutes les plaques d\'un Envoyer tout multi-plaques dans un seul lot. Un envoi à une seule plaque reste un travail isolé. Désactivé par défaut.',
+    },
     tailscaleDisabled: {
       title: 'Intégration Tailscale',
       description: 'Activez pour marquer ce VP comme exposé via Tailscale. Affiche l\'adresse Tailscale de l\'hôte pour que vous sachiez quelle IP coller dans le slicer. L\'étape d\'import CA est inchangée — cette bascule n\'a aucun effet sur les certificats.',
