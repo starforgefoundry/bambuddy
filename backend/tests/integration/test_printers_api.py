@@ -257,6 +257,48 @@ class TestPrintersAPI:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    async def test_update_printer_accepted_models(self, async_client: AsyncClient, printer_factory, db_session):
+        """An X1C can be opted in to running the queue's P1S jobs."""
+        printer = await printer_factory(model="X1C")
+
+        response = await async_client.patch(
+            f"/api/v1/printers/{printer.id}", json={"accepted_models": ["Bambu Lab P1S", "p1s"]}
+        )
+
+        assert response.status_code == 200
+        # Canonicalised and deduplicated on the way in.
+        assert response.json()["accepted_models"] == ["P1S"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_update_printer_rejects_an_unrunnable_accepted_model(
+        self, async_client: AsyncClient, printer_factory, db_session
+    ):
+        """The opt-in may widen who takes a job, never what hardware the
+        G-code reaches — an X1C cannot be told to accept H2D prints."""
+        printer = await printer_factory(model="X1C")
+
+        response = await async_client.patch(f"/api/v1/printers/{printer.id}", json={"accepted_models": ["H2D"]})
+
+        assert response.status_code == 400
+        assert "not interchangeable" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_changing_the_model_drops_a_stranded_accepted_model(
+        self, async_client: AsyncClient, printer_factory, db_session
+    ):
+        """Correcting the model of a printer that was opted in to P1S jobs
+        must not fail the save on a list the user was not editing."""
+        printer = await printer_factory(model="X1C", accepted_models=["P1S"])
+
+        response = await async_client.patch(f"/api/v1/printers/{printer.id}", json={"model": "H2D"})
+
+        assert response.status_code == 200
+        assert response.json()["accepted_models"] == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_update_nonexistent_printer(self, async_client: AsyncClient):
         """Verify updating non-existent printer returns 404."""
         response = await async_client.patch("/api/v1/printers/9999", json={"name": "New Name"})

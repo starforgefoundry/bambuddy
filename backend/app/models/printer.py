@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.core.database import Base
@@ -15,6 +15,10 @@ class Printer(Base):
     ip_address: Mapped[str] = mapped_column(String(253))
     access_code: Mapped[str] = mapped_column(String(20))
     model: Mapped[str | None] = mapped_column(String(50))
+    # Other models whose queued jobs this printer will also take, e.g. an X1C
+    # opted in to "Any P1S". Restricted to the model's G-code interchange
+    # family — see printer_models.validate_accepted_models.
+    accepted_models: Mapped[list | None] = mapped_column(JSON, nullable=True)
     location: Mapped[str | None] = mapped_column(String(100))  # Group/location name
     nozzle_count: Mapped[int] = mapped_column(default=1)  # 1 or 2, auto-detected from MQTT
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

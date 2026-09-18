@@ -33,6 +33,10 @@ class PrinterBase(BaseModel):
         pattern=r"^(\d{1,3}(\.\d{1,3}){3}|[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*)$",
     )
     model: str | None = None
+    # Other models whose "Any <model>" queue jobs this printer also accepts.
+    # Validated against the model's G-code interchange family in the route,
+    # where the printer's own model is known even mid-update.
+    accepted_models: list[str] = []
     location: str | None = None  # Group/location name
     auto_archive: bool = True
     external_camera_url: str | None = None
@@ -41,6 +45,12 @@ class PrinterBase(BaseModel):
     external_camera_snapshot_url: str | None = None  # Optional single-frame override; #1177
     camera_rotation: int = 0  # 0, 90, 180, 270 degrees
     camera_light_auto: bool = False  # #1655, used when camera_light_mode is "selected"
+
+    @field_validator("accepted_models", mode="before")
+    @classmethod
+    def _accepted_models_default(cls, v: list[str] | None) -> list[str]:
+        """NULL in the column reads as "own model only"."""
+        return v or []
 
 
 class PrinterCreate(PrinterBase):
@@ -72,6 +82,7 @@ class PrinterUpdate(BaseModel):
     )
     access_code: str | None = None
     model: str | None = None
+    accepted_models: list[str] | None = None
     location: str | None = None
     _location = field_validator("location")(normalize_location_name)
     is_active: bool | None = None
@@ -123,6 +134,7 @@ class PrinterResponse(PrinterBase):
             "serial_number": printer.serial_number,
             "ip_address": printer.ip_address,
             "model": printer.model,
+            "accepted_models": printer.accepted_models or [],
             "location": printer.location,
             "auto_archive": printer.auto_archive,
             "external_camera_url": printer.external_camera_url,

@@ -5310,6 +5310,11 @@ async def run_migrations(conn):
     await _safe_execute(conn, f"ALTER TABLE print_log_entries ADD COLUMN wear_cost {float_type}")
     await _safe_execute(conn, f"ALTER TABLE print_archives ADD COLUMN wear_cost {float_type}")
 
+    # Migration: per-printer opt-in to another model's queued jobs, so a farm
+    # that slices everything for one model can still run it on an
+    # interchangeable machine. NULL means "own model only". JSON is spelled
+    # identically on SQLite and Postgres.
+    await _safe_execute(conn, "ALTER TABLE printers ADD COLUMN accepted_models JSON")
 
 async def _backfill_snapshot_prices(conn) -> None:
     """Give the energy snapshots taken before #1251 the price set at upgrade.
