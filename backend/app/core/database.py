@@ -5204,6 +5204,12 @@ async def run_migrations(conn):
     # Nullable: existing rows have none and keep being shown as before.
     await _safe_execute(conn, "ALTER TABLE slot_preset_mappings ADD COLUMN tray_info_idx VARCHAR(32)")
 
+    # Migration: per-printer opt-in to another model's queued jobs, so a farm
+    # that slices everything for one model can still run it on an
+    # interchangeable machine. NULL means "own model only". JSON is spelled
+    # identically on SQLite and Postgres.
+    await _safe_execute(conn, "ALTER TABLE printers ADD COLUMN accepted_models JSON")
+
 
 async def _migrate_confirm_prompt_body_template(conn) -> None:
     """Replace the one-tap verdict URLs in the outcome prompt's body (#1898).
