@@ -2,6 +2,14 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.5.1] - 2026-09-18
+
+Fork release built on upstream 1.2.5.5 — the trailing number is this fork's
+revision of that upstream version.
+
+### Added
+- **A printer can be opted in to another model's queued jobs** — a farm that slices everything for one model had no way to let an interchangeable machine pick the work up: "Any P1S" matched P1S printers and nothing else, so a single X1C sat idle next to a queue it could have run. Printers → edit → *Also accept jobs for* now lists the models whose G-code the printer can actually execute, and the scheduler matches on the printer's own model plus whatever was ticked. The list is bounded by the same G-code interchange family the cross-model dispatch gate uses (#2578), so the opt-in can widen *who* takes a job but never *what hardware the G-code reaches* — and it is re-checked at match time, so a row written straight to the API cannot widen it either. Printers of the target model are still matched first; an opted-in sibling only takes the job when none of the real thing is free.
+
 ## [1.2.5.5] - 2026-08-30
 
 ### Changed
