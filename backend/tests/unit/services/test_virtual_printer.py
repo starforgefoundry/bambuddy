@@ -486,8 +486,10 @@ class TestVirtualPrinterInstance:
         assert inst.auto_dispatch is True
 
     @pytest.mark.asyncio
-    async def test_add_to_print_queue_with_auto_dispatch_on(self, tmp_path):
-        """Verify queue items have manual_start=False when auto_dispatch=True."""
+    @pytest.mark.parametrize(("slicer_opts", "expected_manual_start"), [({"timelapse": False}, False), (None, True)])
+    async def test_add_to_print_queue_with_auto_dispatch_on(self, tmp_path, slicer_opts, expected_manual_start):
+        """auto_dispatch=True: slicer "Print" (sent a project_file) dispatches,
+        slicer "Send" (FTP only, no project_file) is staged."""
         from backend.app.services.virtual_printer.manager import VirtualPrinterInstance
 
         mock_db = AsyncMock()
@@ -516,6 +518,8 @@ class TestVirtualPrinterInstance:
             base_dir=tmp_path,
             session_factory=mock_session_factory,
         )
+        if slicer_opts is not None:
+            inst._slicer_print_options["test.3mf"] = slicer_opts
 
         # Create a temp 3mf file
         file_path = tmp_path / "test.3mf"
@@ -541,7 +545,7 @@ class TestVirtualPrinterInstance:
 
         assert len(added_items) == 1
         queue_item = added_items[0]
-        assert queue_item.manual_start is False
+        assert queue_item.manual_start is expected_manual_start
 
     @pytest.mark.asyncio
     async def test_add_to_print_queue_broadcasts_archive_created(self, tmp_path):
@@ -606,8 +610,9 @@ class TestVirtualPrinterInstance:
         assert payload["status"] == "archived"
 
     @pytest.mark.asyncio
-    async def test_add_to_print_queue_with_auto_dispatch_off(self, tmp_path):
-        """Verify queue items have manual_start=True when auto_dispatch=False."""
+    @pytest.mark.parametrize("slicer_opts", [{"timelapse": False}, None])
+    async def test_add_to_print_queue_with_auto_dispatch_off(self, tmp_path, slicer_opts):
+        """auto_dispatch=False stages every upload, slicer "Print" and "Send" alike."""
         from backend.app.services.virtual_printer.manager import VirtualPrinterInstance
 
         mock_db = AsyncMock()
@@ -636,6 +641,8 @@ class TestVirtualPrinterInstance:
             base_dir=tmp_path,
             session_factory=mock_session_factory,
         )
+        if slicer_opts is not None:
+            inst._slicer_print_options["test.3mf"] = slicer_opts
 
         # Create a temp 3mf file
         file_path = tmp_path / "test.3mf"
@@ -2571,6 +2578,7 @@ class TestVirtualPrinterInstance:
 
         assert len(added_items) == 1
         assert added_items[0].nozzle_mapping is None  # MQTT was never received
+        assert added_items[0].manual_start is True  # looked like a "Send" at commit time
         assert file_path.name in inst._recent_queue_items
 
         # 2. MQTT project_file arrives AFTER the wait expired — must
@@ -2594,6 +2602,7 @@ class TestVirtualPrinterInstance:
         assert _json.loads(params["nozzle_mapping"]) == [16, -1, -1, 1]
         assert params["timelapse"] is True
         assert params["bed_levelling"] == "off"  # MQTT bed_leveling → column bed_levelling (tri-state)
+        assert params["manual_start"] is False  # late project_file = "Print", so un-stage
         # Recent-queue tracking dict is cleared after the patch.
         assert file_path.name not in inst._recent_queue_items
 
@@ -3133,6 +3142,56 @@ class TestVirtualPrinterInstance:
         # No UPDATE was issued — only the eligibility SELECT ran.
         assert mock_db.execute.await_count == 1
         mock_db.commit.assert_not_awaited()
+        assert "test.3mf" not in inst._recent_queue_items
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("auto_dispatch", [True, False])
+    async def test_on_print_command_late_mqtt_releases_staged_item_only_with_auto_dispatch(
+        self, tmp_path, auto_dispatch
+    ):
+        """A late project_file with no other slicer fields still marks the
+        upload as a "Print": with auto_dispatch on it clears manual_start;
+        with auto_dispatch off there is nothing to patch, so no UPDATE runs.
+        """
+        from backend.app.services.virtual_printer.manager import VirtualPrinterInstance
+
+        select_pending_result = MagicMock()
+        select_pending_result.all = MagicMock(return_value=[(42, None)])
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=select_pending_result)
+        mock_db.commit = AsyncMock()
+
+        mock_session_factory = MagicMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_session_factory.return_value = mock_session_ctx
+
+        inst = VirtualPrinterInstance(
+            vp_id=97,
+            name="LateMQTTRelease",
+            mode="queue",
+            model="O1C2",
+            access_code="12345678",
+            serial_suffix="391800097",
+            auto_dispatch=auto_dispatch,
+            base_dir=tmp_path,
+            session_factory=mock_session_factory,
+        )
+        inst._mqtt = MagicMock()
+        inst._recent_queue_items["test.3mf"] = ([42], 1_000_000.0)
+        with patch("backend.app.services.virtual_printer.manager.time.monotonic", return_value=1_000_001.0):
+            await inst.on_print_command("test.3mf", {"command": "project_file", "file": "test.3mf"})
+
+        if auto_dispatch:
+            # SELECT eligible, then UPDATE manual_start=False.
+            assert mock_db.execute.await_count == 2
+            params = dict(mock_db.execute.await_args_list[1].args[0].compile().params)
+            assert params == {"manual_start": False, "id_1": [42]}
+            mock_db.commit.assert_awaited_once()
+        else:
+            mock_db.execute.assert_not_awaited()
+            mock_db.commit.assert_not_awaited()
         assert "test.3mf" not in inst._recent_queue_items
 
 
