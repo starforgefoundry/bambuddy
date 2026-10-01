@@ -514,6 +514,11 @@ class VirtualPrinterInstance:
             if mqtt_field in data:
                 patch[column] = bool(data[mqtt_field])
 
+        # A late `project_file` still means "Print", not "Send": release the
+        # item the queue-add staged when the wait timed out.
+        if self.auto_dispatch:
+            patch["manual_start"] = False
+
         raw = data.get("nozzle_mapping")
         if raw is not None:
             if isinstance(raw, str):
@@ -1166,7 +1171,9 @@ class VirtualPrinterInstance:
                             plate_id=plate_id,
                             position=max_pos + offset,
                             status="pending",
-                            manual_start=not self.auto_dispatch,
+                            # No `project_file` = slicer "Send" (FTP only) → staged;
+                            # "Print" sends one → follows the VP's auto_dispatch.
+                            manual_start=not self.auto_dispatch or slicer_opts is None,
                             required_filament_types=required_filament_types_json,
                             filament_overrides=filament_overrides_json,
                             bed_levelling=bed_levelling,
