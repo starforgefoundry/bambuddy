@@ -292,6 +292,7 @@ export default {
       descending: "По убыванию",
     },
     cardSize: {
+      extraSmall: "Очень маленькие карточки",
       small: "Маленькие карточки",
       medium: "Средние карточки",
       large: "Большие карточки",

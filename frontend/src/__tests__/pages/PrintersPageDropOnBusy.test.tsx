@@ -139,14 +139,21 @@ describe('PrintersPage — drop onto a busy printer (#2849)', () => {
     await waitFor(() => expect(uploads).toHaveLength(1));
   });
 
-  it('keeps the Print button available while a print is running', async () => {
-    // The button is the other half of "Print from Printer Card" and was hidden
-    // by the same condition. Leaving it hidden while the drop zone accepted the
-    // same file would have had the two routes disagree on the same card.
+  it('swaps the Print button for Pause and Stop while a print is running', async () => {
     renderWith({ state: 'RUNNING' });
     await card();
 
-    expect(await screen.findByTitle('Print')).toBeInTheDocument();
+    expect(await screen.findByTitle('Pause')).toBeInTheDocument();
+    expect(screen.getByTitle('Stop')).toBeInTheDocument();
+    expect(screen.queryByTitle('Print')).not.toBeInTheDocument();
+  });
+
+  it('offers Resume in place of Pause while a print is paused', async () => {
+    renderWith({ state: 'PAUSE' });
+    await card();
+
+    expect(await screen.findByTitle('Resume')).toBeInTheDocument();
+    expect(screen.getByTitle('Stop')).toBeInTheDocument();
   });
 
   it('keeps the Print button available while the printer is offline', async () => {

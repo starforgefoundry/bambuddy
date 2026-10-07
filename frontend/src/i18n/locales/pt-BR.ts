@@ -300,6 +300,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: 'Cartões muito pequenos',
       small: 'Cartões pequenos',
       medium: 'Cartões médios',
       large: 'Cartões grandes',

@@ -1327,6 +1327,33 @@ function StatusSummaryBar({ printers }: { printers: Printer[] | undefined }) {
 type SortOption = 'name' | 'status' | 'model' | 'location' | 'eta';
 type ViewMode = 'expanded' | 'compact';
 
+const CARD_SIZE = { XS: 1, S: 2, M: 3, L: 4, XL: 5 } as const;
+type CardSize = (typeof CARD_SIZE)[keyof typeof CARD_SIZE];
+
+const CARD_SIZE_OPTIONS: { size: CardSize; label: string; titleKey: string }[] = [
+  { size: CARD_SIZE.XS, label: 'XS', titleKey: 'printers.cardSize.extraSmall' },
+  { size: CARD_SIZE.S, label: 'S', titleKey: 'printers.cardSize.small' },
+  { size: CARD_SIZE.M, label: 'M', titleKey: 'printers.cardSize.medium' },
+  { size: CARD_SIZE.L, label: 'L', titleKey: 'printers.cardSize.large' },
+  { size: CARD_SIZE.XL, label: 'XL', titleKey: 'printers.cardSize.extraLarge' },
+];
+
+const CARD_SIZE_STORAGE_KEY = 'printerCardSizeV2';
+// Stored 1-4 as S/M/L/XL before XS existed. Old S is today's XS; M/L/XL moved up one.
+const LEGACY_CARD_SIZE_STORAGE_KEY = 'printerCardSize';
+
+function isCardSize(value: number): value is CardSize {
+  return CARD_SIZE_OPTIONS.some((option) => option.size === value);
+}
+
+function readStoredCardSize(): CardSize {
+  const saved = parseInt(localStorage.getItem(CARD_SIZE_STORAGE_KEY) ?? '', 10);
+  if (isCardSize(saved)) return saved;
+  const legacy = parseInt(localStorage.getItem(LEGACY_CARD_SIZE_STORAGE_KEY) ?? '', 10);
+  const migrated = legacy === CARD_SIZE.XS ? legacy : legacy + 1;
+  return isCardSize(migrated) ? migrated : CARD_SIZE.M;
+}
+
 type ToolbarDropdownOption<T extends string> = {
   value: T;
   label: string;
@@ -1931,16 +1958,22 @@ const DRYING_PRESETS: Record<string, DryingPreset> = {
 };
 
 // How much the printer card's body type and icons grow at each card size
-// (#1848). S is the dense fleet view and M is the default, so both stay at
+// (#1848). XS is the dense fleet view and M is the default, so XS/S/M stay at
 // 1.0 and an existing install looks identical until the user picks L or XL --
 // the same control the request asked to have this follow.
-const CARD_BODY_SCALE: Record<number, number> = { 1: 1, 2: 1, 3: 1.2, 4: 1.4 };
+const CARD_BODY_SCALE: Record<CardSize, number> = {
+  [CARD_SIZE.XS]: 1,
+  [CARD_SIZE.S]: 1,
+  [CARD_SIZE.M]: 1,
+  [CARD_SIZE.L]: 1.2,
+  [CARD_SIZE.XL]: 1.4,
+};
 
 // The scaled sizes, handed to the card subtree as custom properties. Every
 // converted class names its old fixed value as the fallback, so anything that
 // renders outside a card root -- the portalled temperature popover -- keeps
 // exactly the size it has today.
-function buildCardScaleStyle(cardSize: number): React.CSSProperties {
+function buildCardScaleStyle(cardSize: CardSize): React.CSSProperties {
   const scale = CARD_BODY_SCALE[cardSize] ?? 1;
   // Rounded to a tenth so the values stay readable in devtools.
   const px = (base: number) => `${Math.round(base * scale * 10) / 10}px`;
@@ -2036,7 +2069,7 @@ function PrinterCard({
   hideIfDisconnected,
   maintenanceInfo,
   viewMode = 'expanded',
-  cardSize = 2,
+  cardSize = CARD_SIZE.M,
   amsThresholds,
   spoolmanEnabled = false,
   linkedSpools,
@@ -2071,7 +2104,7 @@ function PrinterCard({
   hideIfDisconnected?: boolean;
   maintenanceInfo?: PrinterMaintenanceInfo;
   viewMode?: ViewMode;
-  cardSize?: number;
+  cardSize?: CardSize;
   amsThresholds?: {
     humidityGood: number;
     humidityFair: number;
@@ -3470,31 +3503,33 @@ function PrinterCard({
 
   const getImageSize = () => {
     switch (cardSize) {
-      case 1: return 'w-10 h-10';
-      case 2: return 'w-14 h-14';
-      case 3: return 'w-16 h-16';
-      case 4: return 'w-20 h-20';
-      default: return 'w-14 h-14';
+      case CARD_SIZE.XS: return 'w-10 h-10';
+      case CARD_SIZE.S: return 'w-14 h-14';
+      case CARD_SIZE.M: return 'w-14 h-14';
+      case CARD_SIZE.L: return 'w-16 h-16';
+      case CARD_SIZE.XL: return 'w-20 h-20';
     }
   };
   const getTitleSize = () => {
     switch (cardSize) {
-      case 1: return 'text-base truncate';
-      case 2: return 'text-lg';
-      case 3: return 'text-xl';
-      case 4: return 'text-2xl';
-      default: return 'text-lg';
+      case CARD_SIZE.XS: return 'text-base truncate';
+      case CARD_SIZE.S: return 'text-lg';
+      case CARD_SIZE.M: return 'text-lg';
+      case CARD_SIZE.L: return 'text-xl';
+      case CARD_SIZE.XL: return 'text-2xl';
     }
   };
   const getSpacing = () => {
     switch (cardSize) {
-      case 1: return 'mb-2';
-      case 2: return 'mb-4';
-      case 3: return 'mb-5';
-      case 4: return 'mb-6';
-      default: return 'mb-4';
+      case CARD_SIZE.XS: return 'mb-2';
+      case CARD_SIZE.S: return 'mb-4';
+      case CARD_SIZE.M: return 'mb-4';
+      case CARD_SIZE.L: return 'mb-5';
+      case CARD_SIZE.XL: return 'mb-6';
     }
   };
+  // S drops status badges, temperatures, fans and secondary controls; pause/stop stay while printing.
+  const isCondensedCard = cardSize === CARD_SIZE.S;
 
   // A dropped file always becomes a queue item, so a printer that is busy,
   // offline or mid-drying is no reason to refuse the drop — it only means the
@@ -3581,6 +3616,8 @@ function PrinterCard({
 
   const footerActionButtonClass = '!h-8 !min-h-8 !px-2 !py-0';
   const footerIconButtonClass = '!h-8 !min-h-8 !w-8 !px-0 !py-0';
+  const isPrintControlBusy = stopPrintMutation.isPending || pausePrintMutation.isPending || resumePrintMutation.isPending;
+  const isPrintPaused = status?.state === 'PAUSE';
 
   // Opening a camera in a given mode, without touching which mode is remembered
   // -- the split button's two halves want the same action but disagree about
@@ -3890,7 +3927,7 @@ function PrinterCard({
           </div>
         </div>
       )}
-      <CardContent className={`${cardSize >= 3 ? 'p-5' : ''} flex flex-1 flex-col`}>
+      <CardContent className={`${cardSize >= CARD_SIZE.L ? 'p-5' : ''} flex flex-1 flex-col`}>
         {/* Header */}
         <div className={getSpacing()}>
           {/* Top row: Image, Name, Menu */}
@@ -3973,7 +4010,7 @@ function PrinterCard({
           </div>
 
           {/* Badges row - only in expanded mode */}
-          {viewMode === 'expanded' && (
+          {viewMode === 'expanded' && !isCondensedCard && (
             <div className="mt-2">
               <div className="flex flex-wrap items-center gap-2">
               {/* Connection status badge (or Maintenance pill when out of service).
@@ -4502,7 +4539,7 @@ function PrinterCard({
             )}
 
             {/* Temperatures */}
-            {status.temperatures && viewMode === 'expanded' && (() => {
+            {status.temperatures && viewMode === 'expanded' && !isCondensedCard && (() => {
               // Use actual heater states from MQTT stream
               const nozzleHeating = status.temperatures.nozzle_heating || status.temperatures.nozzle_2_heating || false;
               const bedHeating = status.temperatures.bed_heating || false;
@@ -4858,15 +4895,9 @@ function PrinterCard({
             {viewMode === 'expanded' && showClearPlateButton && expandedClearPlateButton}
 
             {/* Controls */}
-            {viewMode === 'expanded' && (() => {
-              // Determine print state for control buttons
-              const isRunning = status.state === 'RUNNING';
-              const isPaused = status.state === 'PAUSE';
-              const isPrinting = isRunning || isPaused;
-              const isControlBusy = stopPrintMutation.isPending || pausePrintMutation.isPending || resumePrintMutation.isPending;
-              const unavailablePrintActionClass = 'bg-bambu-dark text-bambu-gray/50 cursor-not-allowed opacity-50';
+            {viewMode === 'expanded' && !isCondensedCard && (() => {
+              const isPrinting = isPrintingOrPaused;
               const iconControlClass = 'flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-              const printControlClass = 'flex h-8 w-20 items-center justify-center gap-1 px-2 rounded-lg text-xs font-medium transition-colors';
 
               return (
                 <div className="mt-3">
@@ -5202,55 +5233,6 @@ function PrinterCard({
                         </div>
                       ))()}
 
-                    </div>
-
-                    {/* Right: Print Control Buttons */}
-                    <div className="ml-auto flex items-center justify-end gap-2 flex-shrink-0">
-                      {/* Pause/Resume button */}
-                      {(() => {
-                        const pauseUnavailable = !isPrinting || isControlBusy || !hasPermission('printers:control');
-                        return (
-                      <button
-                        onClick={() => isPaused ? setShowResumeConfirm(true) : setShowPauseConfirm(true)}
-                        disabled={pauseUnavailable}
-                        className={`
-                          ${printControlClass}
-                          ${pauseUnavailable
-                            ? unavailablePrintActionClass
-                            : isPaused
-                              ? 'bg-bambu-green/20 text-bambu-green hover:bg-bambu-green/30'
-                              : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/30'
-                          }
-                        `}
-                        title={!hasPermission('printers:control') ? t('printers.permission.noControl') : (isPaused ? t('printers.resume') : t('printers.pause'))}
-                      >
-                        {isPaused ? <Play className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" /> : <Pause className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" />}
-                        {isPaused ? t('printers.resume') : t('printers.pause')}
-                      </button>
-                        );
-                      })()}
-
-                      {/* Stop button */}
-                      {(() => {
-                        const stopUnavailable = !isPrinting || isControlBusy || !hasPermission('printers:control');
-                        return (
-                      <button
-                        onClick={() => setShowStopConfirm(true)}
-                        disabled={stopUnavailable}
-                        className={`
-                          ${printControlClass}
-                          ${stopUnavailable
-                            ? unavailablePrintActionClass
-                            : 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-500/30'
-                          }
-                        `}
-                        title={!hasPermission('printers:control') ? t('printers.permission.noControl') : t('printers.stop')}
-                      >
-                        <Square className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" />
-                        {t('printers.stop')}
-                      </button>
-                        );
-                      })()}
                     </div>
                   </div>
                 </div>
@@ -6711,11 +6693,37 @@ function PrinterCard({
                 >
                   <HardDrive className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
                 </Button>
-                {/* Shown whatever the printer is doing (#2849): this uploads a
-                    file and queues it, which a busy or offline printer is no
-                    reason to refuse -- it only means the item waits. Hiding it
-                    while the drop zone accepted the same file would have left
-                    the two routes into this flow disagreeing. */}
+                {isPrintingOrPaused ? (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => isPrintPaused ? setShowResumeConfirm(true) : setShowPauseConfirm(true)}
+                      disabled={isPrintControlBusy || !hasPermission('printers:control')}
+                      title={!hasPermission('printers:control') ? t('printers.permission.noControl') : (isPrintPaused ? t('printers.resume') : t('printers.pause'))}
+                      className={`${footerActionButtonClass} ${
+                        isPrintPaused
+                          ? '!bg-bambu-green hover:!bg-bambu-green/80 !text-white'
+                          : '!bg-yellow-500 hover:!bg-yellow-500/80 !text-white'
+                      }`}
+                    >
+                      {isPrintPaused
+                        ? <Play className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
+                        : <Pause className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />}
+                      {isPrintPaused ? t('printers.resume') : t('printers.pause')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setShowStopConfirm(true)}
+                      disabled={isPrintControlBusy || !hasPermission('printers:control')}
+                      title={!hasPermission('printers:control') ? t('printers.permission.noControl') : t('printers.stop')}
+                      className={footerActionButtonClass}
+                    >
+                      <Square className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
+                      {t('printers.stop')}
+                    </Button>
+                  </>
+                ) : (
                 <Button
                   size="sm"
                   onClick={() => setShowUploadForPrint(true)}
@@ -6732,6 +6740,7 @@ function PrinterCard({
                   <PrinterIcon className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
                   {t('common.print')}
                 </Button>
+                )}
               </div>
             </div>
         </div>
@@ -8823,11 +8832,11 @@ export function PrintersPage() {
   const [sortAsc, setSortAsc] = useState<boolean>(() => {
     return localStorage.getItem('printerSortAsc') !== 'false';
   });
-  // Card size: 1=small, 2=medium, 3=large, 4=xl
-  const [cardSize, setCardSize] = useState<number>(() => {
-    const saved = localStorage.getItem('printerCardSize');
-    return saved ? parseInt(saved, 10) : 2; // Default to medium
-  });
+  const [cardSize, setCardSize] = useState<CardSize>(readStoredCardSize);
+  const selectCardSize = useCallback((size: CardSize) => {
+    setCardSize(size);
+    localStorage.setItem(CARD_SIZE_STORAGE_KEY, String(size));
+  }, []);
   // Page view: 'cards' = printer cards (default), 'camwall' = grid of live camera tiles
   const [pageView, setPageView] = useState<'cards' | 'camwall'>(() => {
     return localStorage.getItem('printerPageView') === 'camwall' ? 'camwall' : 'cards';
@@ -8850,8 +8859,7 @@ export function PrintersPage() {
     const saved = localStorage.getItem('camWallStatusMode');
     return saved === 'off' || saved === 'compact' || saved === 'full' ? saved : 'full';
   });
-  // Derive viewMode from cardSize: S=compact, M/L/XL=expanded
-  const viewMode: ViewMode = cardSize === 1 ? 'compact' : 'expanded';
+  const viewMode: ViewMode = cardSize === CARD_SIZE.XS ? 'compact' : 'expanded';
   const [compactDrilldownPrinterId, setCompactDrilldownPrinterId] = useState<number | null>(null);
   const scrollPrinterIntoView = useCallback((printerId: number) => {
     requestAnimationFrame(() => {
@@ -8869,19 +8877,17 @@ export function PrintersPage() {
   }, []);
   const openCompactCard = useCallback((printerId: number) => {
     setCompactDrilldownPrinterId(printerId);
-    setCardSize(2);
-    localStorage.setItem('printerCardSize', '2');
+    selectCardSize(CARD_SIZE.M);
     scrollPrinterIntoView(printerId);
-  }, [scrollPrinterIntoView]);
+  }, [selectCardSize, scrollPrinterIntoView]);
   const returnToCompactCards = useCallback(() => {
     const printerId = compactDrilldownPrinterId;
     setCompactDrilldownPrinterId(null);
-    setCardSize(1);
-    localStorage.setItem('printerCardSize', '1');
+    selectCardSize(CARD_SIZE.XS);
     if (printerId != null) {
       scrollPrinterIntoView(printerId);
     }
-  }, [compactDrilldownPrinterId, scrollPrinterIntoView]);
+  }, [compactDrilldownPrinterId, selectCardSize, scrollPrinterIntoView]);
   const [search, setSearch] = useState('');
   // Both filters persist like every other preference on this page (#2833).
   // `search` deliberately does not: a box that silently refills itself on
@@ -9292,18 +9298,15 @@ export function PrintersPage() {
     localStorage.setItem('printerSortAsc', String(newAsc));
   };
 
-  // Grid classes based on card size (1=small, 2=medium, 3=large, 4=xl)
   const getGridClasses = () => {
     switch (cardSize) {
-      case 1: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'; // S: many small cards
-      case 2: return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'; // M: medium cards
-      case 3: return 'grid-cols-1 lg:grid-cols-2'; // L: large cards, 2 columns max
-      case 4: return 'grid-cols-1'; // XL: single column, full width
-      default: return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+      case CARD_SIZE.XS: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+      case CARD_SIZE.S: return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+      case CARD_SIZE.M: return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+      case CARD_SIZE.L: return 'grid-cols-1 lg:grid-cols-2';
+      case CARD_SIZE.XL: return 'grid-cols-1';
     }
   };
-
-  const cardSizeLabels = ['S', 'M', 'L', 'XL'];
 
   // Increment version counter whenever a printer status cache entry is updated so
   // filteredPrinters re-computes reactively on WebSocket-driven status changes.
@@ -9694,27 +9697,25 @@ export function PrintersPage() {
 
       {/* Card size selector */}
       <div className={`flex h-8 items-center bg-bambu-dark rounded-lg border border-bambu-dark-tertiary ${pageView === 'camwall' ? 'opacity-40 pointer-events-none' : ''} ${inMenu ? 'w-full' : ''}`}>
-        {cardSizeLabels.map((label, index) => {
-          const size = index + 1;
+        {CARD_SIZE_OPTIONS.map(({ size, label, titleKey }, index) => {
           const isSelected = cardSize === size;
           return (
             <button
               key={label}
               onClick={() => {
                 setCompactDrilldownPrinterId(null);
-                setCardSize(size);
-                localStorage.setItem('printerCardSize', String(size));
+                selectCardSize(size);
               }}
               className={`h-full px-2 text-xs font-medium transition-colors ${inMenu ? 'flex-1' : ''} ${
                 index === 0 ? 'rounded-l-lg' : ''
               } ${
-                index === cardSizeLabels.length - 1 ? 'rounded-r-lg' : ''
+                index === CARD_SIZE_OPTIONS.length - 1 ? 'rounded-r-lg' : ''
               } ${
                 isSelected
                   ? 'bg-bambu-green text-white'
                   : 'text-white hover:bg-bambu-dark-tertiary'
               }`}
-              title={label === 'S' ? t('printers.cardSize.small') : label === 'M' ? t('printers.cardSize.medium') : label === 'L' ? t('printers.cardSize.large') : t('printers.cardSize.extraLarge')}
+              title={t(titleKey)}
             >
               {label}
             </button>
@@ -9975,7 +9976,7 @@ export function PrintersPage() {
                   </h2>
                 }
               >
-                <div className={`grid gap-4 ${cardSize >= 3 ? 'gap-6' : ''} ${getGridClasses()}`}>
+                <div className={`grid gap-4 ${cardSize >= CARD_SIZE.L ? 'gap-6' : ''} ${getGridClasses()}`}>
                   {groupPrinters.map((printer) => (
                     <PrinterCard
                       key={printer.id}
@@ -10028,7 +10029,7 @@ export function PrintersPage() {
         </div>
       ) : (
         /* Regular grid view */
-        <div className={`grid gap-4 ${cardSize >= 3 ? 'gap-6' : ''} ${getGridClasses()}`}>
+        <div className={`grid gap-4 ${cardSize >= CARD_SIZE.L ? 'gap-6' : ''} ${getGridClasses()}`}>
           {sortedPrinters.map((printer) => (
             <PrinterCard
               key={printer.id}
@@ -10077,7 +10078,7 @@ export function PrintersPage() {
         </div>
       )}
 
-      {cardSize === 2 && compactDrilldownPrinterId != null && (
+      {cardSize === CARD_SIZE.M && compactDrilldownPrinterId != null && (
         <button
           type="button"
           onClick={returnToCompactCards}

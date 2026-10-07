@@ -286,6 +286,7 @@ export default {
       descending: '내림차순 정렬'
     },
     cardSize: {
+      extraSmall: '아주 작은 카드',
       small: '작은 카드',
       medium: '중간 카드',
       large: '큰 카드',

@@ -300,6 +300,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: 'Extra small cards',
       small: 'Small cards',
       medium: 'Medium cards',
       large: 'Large cards',

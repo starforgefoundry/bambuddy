@@ -300,6 +300,7 @@ export default {
     },
     // Kart boyutu
     cardSize: {
+      extraSmall: 'Çok küçük kartlar',
       small: 'Küçük kartlar',
       medium: 'Orta kartlar',
       large: 'Büyük kartlar',

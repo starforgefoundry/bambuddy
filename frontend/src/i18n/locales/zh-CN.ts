@@ -300,6 +300,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: '超小卡片',
       small: '小卡片',
       medium: '中卡片',
       large: '大卡片',

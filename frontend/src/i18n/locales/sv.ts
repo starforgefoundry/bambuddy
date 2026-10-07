@@ -300,6 +300,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: 'Mycket små kort',
       small: 'Små kort',
       medium: 'Mellanstora kort',
       large: 'Stora kort',

@@ -606,7 +606,7 @@ describe('PrintersPage', () => {
         expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'S' }));
+      fireEvent.click(screen.getByRole('button', { name: 'XS' }));
 
       await waitFor(() => {
         expect(screen.queryByText('Mark plate as cleared')).not.toBeInTheDocument();
