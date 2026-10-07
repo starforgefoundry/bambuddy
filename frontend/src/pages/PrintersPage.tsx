@@ -3617,7 +3617,10 @@ function PrinterCard({
   const footerActionButtonClass = '!h-8 !min-h-8 !px-2 !py-0';
   const footerIconButtonClass = '!h-8 !min-h-8 !w-8 !px-0 !py-0';
   const isPrintControlBusy = stopPrintMutation.isPending || pausePrintMutation.isPending || resumePrintMutation.isPending;
+  const isPrintActionUnavailable = isPrintControlBusy || !hasPermission('printers:control');
   const isPrintPaused = status?.state === 'PAUSE';
+  const printControlClass = 'flex h-8 w-20 items-center justify-center gap-1 px-2 rounded-lg text-xs font-medium transition-colors';
+  const unavailablePrintActionClass = 'bg-bambu-dark text-bambu-gray/50 cursor-not-allowed opacity-50';
 
   // Opening a camera in a given mode, without touching which mode is remembered
   // -- the split button's two halves want the same action but disagree about
@@ -6695,33 +6698,38 @@ function PrinterCard({
                 </Button>
                 {isPrintingOrPaused ? (
                   <>
-                    <Button
-                      size="sm"
+                    <button
                       onClick={() => isPrintPaused ? setShowResumeConfirm(true) : setShowPauseConfirm(true)}
-                      disabled={isPrintControlBusy || !hasPermission('printers:control')}
+                      disabled={isPrintActionUnavailable}
+                      className={`
+                        ${printControlClass}
+                        ${isPrintActionUnavailable
+                          ? unavailablePrintActionClass
+                          : isPrintPaused
+                            ? 'bg-bambu-green/20 text-bambu-green hover:bg-bambu-green/30'
+                            : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/30'
+                        }
+                      `}
                       title={!hasPermission('printers:control') ? t('printers.permission.noControl') : (isPrintPaused ? t('printers.resume') : t('printers.pause'))}
-                      className={`${footerActionButtonClass} ${
-                        isPrintPaused
-                          ? '!bg-bambu-green hover:!bg-bambu-green/80 !text-white'
-                          : '!bg-yellow-500 hover:!bg-yellow-500/80 !text-white'
-                      }`}
                     >
-                      {isPrintPaused
-                        ? <Play className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
-                        : <Pause className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />}
+                      {isPrintPaused ? <Play className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" /> : <Pause className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" />}
                       {isPrintPaused ? t('printers.resume') : t('printers.pause')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
+                    </button>
+                    <button
                       onClick={() => setShowStopConfirm(true)}
-                      disabled={isPrintControlBusy || !hasPermission('printers:control')}
+                      disabled={isPrintActionUnavailable}
+                      className={`
+                        ${printControlClass}
+                        ${isPrintActionUnavailable
+                          ? unavailablePrintActionClass
+                          : 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-500/30'
+                        }
+                      `}
                       title={!hasPermission('printers:control') ? t('printers.permission.noControl') : t('printers.stop')}
-                      className={footerActionButtonClass}
                     >
-                      <Square className="w-[var(--pc-i4,1rem)] h-[var(--pc-i4,1rem)]" />
+                      <Square className="w-[var(--pc-i3,0.75rem)] h-[var(--pc-i3,0.75rem)]" />
                       {t('printers.stop')}
-                    </Button>
+                    </button>
                   </>
                 ) : (
                 <Button
