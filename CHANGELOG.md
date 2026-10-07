@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.3] - 2026-10-07
+
+### Fixed
+- **Footer Pause / Resume and Stop use their original muted styling** — 1.2.5.7.2 rendered them with saturated backgrounds.
+
 ## [1.2.5.7.2] - 2026-10-07
 
 Fork release built on upstream 1.2.5.7.
