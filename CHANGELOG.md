@@ -2,6 +2,14 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.2] - 2026-10-07
+
+Fork release built on upstream 1.2.5.7.
+
+### Changed
+- **Printer card sizes are now XS / S / M / L / XL** — the old S (compact) is now XS. The new S is M's width without status badges, temperatures, fans or the controls row. M, L and XL are unchanged. A saved size carries over, so an existing M stays M.
+- **Pause / Resume and Stop moved to the card footer** — while a print is running or paused they replace the Print button; when idle the Print button is shown.
+
 ## [1.2.5.7.1] - 2026-10-04
 
 Fork release built on upstream 1.2.5.7 — the trailing number is this fork's
