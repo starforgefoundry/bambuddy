@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.4] - 2026-10-11
+
+### Fixed
+- **Queue History scrolls with a single scrollbar** — the hidden thumbnail previews on the last rows gave the page a second, nested scrollbar.
+
 ## [1.2.5.7.3] - 2026-10-07
 
 ### Fixed
