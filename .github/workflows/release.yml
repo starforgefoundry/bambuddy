@@ -128,3 +128,11 @@ jobs:
             echo "docker pull $IMAGE:$VERSION"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: [verify, publish]
+    if: needs.verify.outputs.tag_latest == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+    secrets: inherit
