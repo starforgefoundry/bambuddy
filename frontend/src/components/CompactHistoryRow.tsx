@@ -92,7 +92,7 @@ export function CompactHistoryRow({
               so the popup escapes its rounded border. pointer-events-none so
               it doesn't interfere with clicks on rows below. */}
           {thumbnailUrl && (
-            <div className="history-thumb-preview absolute z-[60] left-full top-0 ml-2 w-48 h-48 pointer-events-none opacity-0 transition-opacity">
+            <div className="history-thumb-preview hidden absolute z-[60] left-full top-0 ml-2 w-48 h-48 pointer-events-none">
               <img
                 src={thumbnailUrl}
                 alt=""
