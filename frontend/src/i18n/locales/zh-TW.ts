@@ -7778,6 +7778,17 @@ export default {
       allow: '允許',
       deny: '取消',
     },
+    orcaslicer: {
+      connecting: '正在連結 OrcaSlicer…',
+      errorTitle: '無法連結 OrcaSlicer',
+      notInPlugin: '請從 OrcaSlicer 中的 Bambuddy 外掛程式開啟此頁面。',
+      failed: '連結 OrcaSlicer 失敗。請關閉此視窗，然後從外掛程式重試。',
+      title: '允許 OrcaSlicer 連結嗎？',
+      permissions: 'OrcaSlicer 將能檢視你的印表機、將檔案上傳到檔案庫，並將列印加入佇列。它會取得專用的 API 金鑰，你可以在「設定 > API 金鑰」中撤銷。',
+      deny: '拒絕',
+      connected: '已連結。你可以關閉此視窗。',
+      denied: '已拒絕連結。你可以關閉此視窗。',
+    },
   },
   cameraTokens: {
     scope: {

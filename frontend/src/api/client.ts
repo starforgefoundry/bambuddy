@@ -371,6 +371,13 @@ export interface ConnectAuthorizeInfo {
   already_granted: boolean;
 }
 
+// `key` and `username` are null while authentication is disabled.
+export interface OrcaSlicerToken {
+  key: string | null;
+  username: string | null;
+  auth_enabled: boolean;
+}
+
 // One row of the token-authenticated Cam Wall feed (#2531). Deliberately
 // smaller than PrinterStatus: no serial, no IP, no print filename — a kiosk URL
 // is not a secret, so the payload behind it must not be either.
@@ -7146,6 +7153,11 @@ export const api = {
     request<{ code: string; redirect_uri: string }>('/connect/authorize', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  createOrcaSlicerToken: (deviceName: string) =>
+    request<OrcaSlicerToken>('/connect/orcaslicer/token', {
+      method: 'POST',
+      body: JSON.stringify({ device_name: deviceName }),
     }),
 
   // Long-lived camera tokens (#1108, #2531)

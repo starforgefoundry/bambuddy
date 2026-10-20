@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.5] - 2026-10-20
+
+### Added
+- **Sign in from the OrcaSlicer plugin** — the Bambuddy plugin for OrcaSlicer opens `/connect/orcaslicer`, where you sign in with your normal login (password or SSO) and approve. The plugin gets its own API key that can read printer status, upload to the library and queue prints. Revoke it in Settings > API Keys.
+
 ## [1.2.5.7.4] - 2026-10-11
 
 ### Fixed

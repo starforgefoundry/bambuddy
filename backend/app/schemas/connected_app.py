@@ -107,3 +107,21 @@ class ConnectedUser(BaseModel):
 class ConnectTokenResponse(BaseModel):
     user: ConnectedUser
     issued_at: datetime
+
+
+ORCASLICER_DEFAULT_DEVICE_NAME = "OrcaSlicer"
+
+
+class OrcaSlicerTokenRequest(BaseModel):
+    device_name: str = Field(default=ORCASLICER_DEFAULT_DEVICE_NAME, max_length=100)
+
+    @field_validator("device_name")
+    @classmethod
+    def _strip_device_name(cls, value: str) -> str:
+        return value.strip() or ORCASLICER_DEFAULT_DEVICE_NAME
+
+
+class OrcaSlicerTokenResponse(BaseModel):
+    key: str | None
+    username: str | None
+    auth_enabled: bool

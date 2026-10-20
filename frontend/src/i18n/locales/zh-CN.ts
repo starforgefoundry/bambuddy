@@ -7778,6 +7778,17 @@ export default {
       allow: '允许',
       deny: '取消',
     },
+    orcaslicer: {
+      connecting: '正在连接 OrcaSlicer…',
+      errorTitle: '无法连接 OrcaSlicer',
+      notInPlugin: '请从 OrcaSlicer 中的 Bambuddy 插件打开此页面。',
+      failed: '连接 OrcaSlicer 失败。请关闭此窗口，然后从插件重试。',
+      title: '允许 OrcaSlicer 连接吗？',
+      permissions: 'OrcaSlicer 将能够查看你的打印机、向文件库上传文件，并将打印添加到队列。它会获得专用的 API 密钥，你可以在“设置 > API 密钥”中撤销。',
+      deny: '拒绝',
+      connected: '已连接。你可以关闭此窗口。',
+      denied: '已拒绝连接。你可以关闭此窗口。',
+    },
   },
   cameraTokens: {
     scope: {

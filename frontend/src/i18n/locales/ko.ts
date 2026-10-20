@@ -7236,6 +7236,17 @@ export default {
       allow: '허용',
       deny: '취소',
     },
+    orcaslicer: {
+      connecting: 'OrcaSlicer 연결 중…',
+      errorTitle: 'OrcaSlicer를 연결할 수 없습니다',
+      notInPlugin: 'OrcaSlicer의 Bambuddy 플러그인에서 이 페이지를 여세요.',
+      failed: 'OrcaSlicer 연결에 실패했습니다. 이 창을 닫고 플러그인에서 다시 시도하세요.',
+      title: 'OrcaSlicer 연결을 허용할까요?',
+      permissions: 'OrcaSlicer가 프린터를 보고, 라이브러리에 파일을 업로드하고, 대기열에 출력을 추가할 수 있게 됩니다. 전용 API 키가 발급되며 설정 > API 키에서 취소할 수 있습니다.',
+      deny: '거부',
+      connected: '연결되었습니다. 이 창을 닫아도 됩니다.',
+      denied: '연결이 거부되었습니다. 이 창을 닫아도 됩니다.',
+    },
   },
   cameraTokens: {
     scope: {

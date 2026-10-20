@@ -7836,6 +7836,17 @@ errors: {
       allow: 'Tillåt',
       deny: 'Avbryt',
     },
+    orcaslicer: {
+      connecting: 'Ansluter OrcaSlicer…',
+      errorTitle: 'Det går inte att ansluta OrcaSlicer',
+      notInPlugin: 'Öppna den här sidan från Bambuddy-pluginet i OrcaSlicer.',
+      failed: 'Det gick inte att ansluta OrcaSlicer. Stäng fönstret och försök igen från pluginet.',
+      title: 'Tillåt OrcaSlicer att ansluta?',
+      permissions: 'OrcaSlicer kommer att kunna se dina skrivare, ladda upp filer till biblioteket och lägga till utskrifter i kön. Den får en egen API-nyckel som du kan återkalla under Inställningar > API-nycklar.',
+      deny: 'Neka',
+      connected: 'Ansluten. Du kan stänga det här fönstret.',
+      denied: 'Anslutningen nekades. Du kan stänga det här fönstret.',
+    },
   },
   cameraTokens: {
     scope: {

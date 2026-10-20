@@ -7780,6 +7780,17 @@ export default {
       allow: 'Consenti',
       deny: 'Annulla',
     },
+    orcaslicer: {
+      connecting: 'Collegamento di OrcaSlicer…',
+      errorTitle: 'Impossibile collegare OrcaSlicer',
+      notInPlugin: 'Apri questa pagina dal plugin Bambuddy in OrcaSlicer.',
+      failed: 'Collegamento di OrcaSlicer non riuscito. Chiudi questa finestra e riprova dal plugin.',
+      title: 'Consentire a OrcaSlicer di collegarsi?',
+      permissions: 'OrcaSlicer potrà vedere le tue stampanti, caricare file nella libreria e aggiungere stampe alla coda. Riceve una propria chiave API, che puoi revocare in Impostazioni > Chiavi API.',
+      deny: 'Nega',
+      connected: 'Collegato. Puoi chiudere questa finestra.',
+      denied: 'Collegamento negato. Puoi chiudere questa finestra.',
+    },
   },
   cameraTokens: {
     scope: {

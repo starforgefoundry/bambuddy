@@ -7794,6 +7794,17 @@ export default {
       allow: '許可',
       deny: 'キャンセル',
     },
+    orcaslicer: {
+      connecting: 'OrcaSlicer を接続しています…',
+      errorTitle: 'OrcaSlicer を接続できません',
+      notInPlugin: 'このページは OrcaSlicer の Bambuddy プラグインから開いてください。',
+      failed: 'OrcaSlicer の接続に失敗しました。このウィンドウを閉じて、プラグインからもう一度お試しください。',
+      title: 'OrcaSlicer の接続を許可しますか？',
+      permissions: 'OrcaSlicer はプリンターの表示、ライブラリへのファイルのアップロード、キューへの印刷の追加ができるようになります。専用の API キーが発行され、「設定 > API キー」でいつでも取り消せます。',
+      deny: '拒否',
+      connected: '接続しました。このウィンドウを閉じてかまいません。',
+      denied: '接続を拒否しました。このウィンドウを閉じてかまいません。',
+    },
   },
   cameraTokens: {
     scope: {
