@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.6] - 2026-10-20
+
+### Changed
+- **OrcaSlicer plugin signs in through your browser** — the plugin opens `/connect/orcaslicer` in your default browser instead of a slicer window. Check that the code matches the one shown in OrcaSlicer, then approve; the plugin picks up its key on its own.
+
 ## [1.2.5.7.5] - 2026-10-20
 
 ### Added

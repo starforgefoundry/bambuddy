@@ -371,11 +371,9 @@ export interface ConnectAuthorizeInfo {
   already_granted: boolean;
 }
 
-// `key` and `username` are null while authentication is disabled.
-export interface OrcaSlicerToken {
-  key: string | null;
-  username: string | null;
-  auth_enabled: boolean;
+export interface OrcaSlicerDevice {
+  user_code: string;
+  device_name: string;
 }
 
 // One row of the token-authenticated Cam Wall feed (#2531). Deliberately
@@ -7154,10 +7152,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  createOrcaSlicerToken: (deviceName: string) =>
-    request<OrcaSlicerToken>('/connect/orcaslicer/token', {
+  getOrcaSlicerDevice: (userCode: string) =>
+    request<OrcaSlicerDevice>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}`),
+  approveOrcaSlicerDevice: (userCode: string) =>
+    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ device_name: deviceName }),
+    }),
+  denyOrcaSlicerDevice: (userCode: string) =>
+    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/deny`, {
+      method: 'POST',
     }),
 
   // Long-lived camera tokens (#1108, #2531)

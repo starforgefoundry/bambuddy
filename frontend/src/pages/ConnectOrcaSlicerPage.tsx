@@ -1,77 +1,71 @@
 /**
- * Connects the Bambuddy plugin in OrcaSlicer.
+ * Approves a sign-in started by the Bambuddy plugin in OrcaSlicer.
  *
- * The plugin opens this page in its webview. After the user signs in and
- * approves, the page creates an API key for the plugin and hands it over
- * through `window.orca.postMessage`, which OrcaSlicer injects into the page.
+ * The plugin opens this page in the user's browser with `?code=<user code>`
+ * and polls the backend until the request is approved or denied here.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, Link2, Loader2, XCircle } from 'lucide-react';
-import { api } from '../api/client';
+import { api, ApiError, type OrcaSlicerDevice } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 
-const DEFAULT_DEVICE_NAME = 'OrcaSlicer';
-const TOKEN_MESSAGE = 'bambuddy-token';
-const DENIED_MESSAGE = 'bambuddy-token-denied';
+const HTTP_NOT_FOUND = 404;
 
 type Phase =
   | { kind: 'loading' }
-  | { kind: 'consent' }
+  | { kind: 'consent'; device: OrcaSlicerDevice }
   | { kind: 'connected' }
   | { kind: 'denied' }
   | { kind: 'error'; message: string };
 
 export function ConnectOrcaSlicerPage() {
   const { t } = useTranslation();
-  const { authEnabled, loading, user } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
-  const started = useRef(false);
+  const code = searchParams.get('code');
+  const [phase, setPhase] = useState<Phase>(() =>
+    code ? { kind: 'loading' } : { kind: 'error', message: t('connectedApps.orcaslicer.missingCode') },
+  );
 
-  const deviceName = searchParams.get('device') || DEFAULT_DEVICE_NAME;
-
-  const approve = async () => {
-    setPhase({ kind: 'loading' });
-    try {
-      const result = await api.createOrcaSlicerToken(deviceName);
-      window.orca?.postMessage({
-        type: TOKEN_MESSAGE,
-        key: result.key,
-        username: result.username,
-        authEnabled: result.auth_enabled,
-      });
-      setPhase({ kind: 'connected' });
-    } catch (err) {
-      setPhase({
-        kind: 'error',
-        message: err instanceof Error ? err.message : t('connectedApps.orcaslicer.failed'),
-      });
-    }
-  };
-
-  const deny = () => {
-    window.orca?.postMessage({ type: DENIED_MESSAGE });
-    setPhase({ kind: 'denied' });
+  const errorMessage = (err: unknown) => {
+    if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) return t('connectedApps.orcaslicer.expired');
+    return err instanceof Error ? err.message : t('connectedApps.orcaslicer.failed');
   };
 
   useEffect(() => {
-    if (loading || started.current) return;
-    started.current = true;
-
-    if (!window.orca) {
-      setPhase({ kind: 'error', message: t('connectedApps.orcaslicer.notInPlugin') });
-      return;
-    }
-    if (!authEnabled) {
-      void approve();
-      return;
-    }
-    setPhase({ kind: 'consent' });
-    // approve() reads the same query parameters; running this once is the point.
+    if (!code) return;
+    let cancelled = false;
+    api
+      .getOrcaSlicerDevice(code)
+      .then((device) => {
+        if (!cancelled) setPhase({ kind: 'consent', device });
+      })
+      .catch((err) => {
+        if (!cancelled) setPhase({ kind: 'error', message: errorMessage(err) });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // errorMessage only depends on t, which is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, authEnabled]);
+  }, [code]);
+
+  const decide = async (userCode: string, approve: boolean) => {
+    setPhase({ kind: 'loading' });
+    try {
+      if (approve) {
+        await api.approveOrcaSlicerDevice(userCode);
+        setPhase({ kind: 'connected' });
+      } else {
+        await api.denyOrcaSlicerDevice(userCode);
+        setPhase({ kind: 'denied' });
+      }
+    } catch (err) {
+      setPhase({ kind: 'error', message: errorMessage(err) });
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bambu-dark p-4">
@@ -117,19 +111,26 @@ export function ConnectOrcaSlicerPage() {
               <p className="text-sm text-bambu-gray">
                 {t('connectedApps.authorize.signedInAs', { username: user?.username ?? '' })}
               </p>
+              <p className="text-sm text-bambu-gray">
+                {t('connectedApps.orcaslicer.device', { name: phase.device.device_name })}
+              </p>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="font-mono text-3xl font-semibold tracking-widest text-white">{phase.device.user_code}</p>
+              <p className="text-sm text-bambu-gray">{t('connectedApps.orcaslicer.checkCode')}</p>
             </div>
             <p className="text-sm text-bambu-gray">{t('connectedApps.orcaslicer.permissions')}</p>
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={deny}
+                onClick={() => void decide(phase.device.user_code, false)}
                 className="flex-1 px-4 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-bambu-green"
               >
                 {t('connectedApps.orcaslicer.deny')}
               </button>
               <button
                 type="button"
-                onClick={() => void approve()}
+                onClick={() => void decide(phase.device.user_code, true)}
                 className="flex-1 px-4 py-2 bg-bambu-green text-white rounded-md hover:bg-bambu-green/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 {t('connectedApps.authorize.allow')}

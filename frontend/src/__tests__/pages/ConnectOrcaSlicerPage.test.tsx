@@ -1,11 +1,11 @@
 /**
- * OrcaSlicer plugin connect page.
+ * OrcaSlicer plugin sign-in approval page.
  *
- * The page must hand a key to the plugin only after consent (or when there is
- * no authentication to consent to), and only through `window.orca`.
+ * The page must approve the plugin's request only after the user allows it,
+ * and show the code so the user can match it against OrcaSlicer.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { api, ApiError } from '../../api/client';
@@ -18,6 +18,8 @@ vi.mock('../../contexts/AuthContext', async (importOriginal) => {
 
 import { ConnectOrcaSlicerPage } from '../../pages/ConnectOrcaSlicerPage';
 
+const USER_CODE = 'ABCD-EFGH';
+
 function renderAt(search: string) {
   return render(
     <MemoryRouter initialEntries={[`/connect/orcaslicer${search}`]}>
@@ -26,100 +28,73 @@ function renderAt(search: string) {
   );
 }
 
-let postMessage: ReturnType<typeof vi.fn>;
-
-beforeEach(() => {
-  mockUseAuth.authEnabled = true;
-  postMessage = vi.fn();
-  window.orca = { postMessage, submit: vi.fn(), close: vi.fn(), onMessage: vi.fn() };
-});
+function mockDevice() {
+  return vi.spyOn(api, 'getOrcaSlicerDevice').mockResolvedValue({ user_code: USER_CODE, device_name: 'Workshop PC' });
+}
 
 afterEach(() => {
-  delete window.orca;
   vi.restoreAllMocks();
 });
 
 describe('ConnectOrcaSlicerPage', () => {
-  it('asks for consent, then posts the new key to the plugin', async () => {
-    const create = vi
-      .spyOn(api, 'createOrcaSlicerToken')
-      .mockResolvedValue({ key: 'bb_k3y', username: 'martin', auth_enabled: true });
+  it('asks the plugin to start sign-in when there is no code', async () => {
+    const get = vi.spyOn(api, 'getOrcaSlicerDevice');
 
-    renderAt('?device=Workshop%20PC');
+    renderAt('');
+
+    expect(await screen.findByText('Start sign-in from the Bambuddy plugin in OrcaSlicer.')).toBeInTheDocument();
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('reports an expired request', async () => {
+    vi.spyOn(api, 'getOrcaSlicerDevice').mockRejectedValue(new ApiError('Sign-in request not found or expired', 404));
+
+    renderAt(`?code=${USER_CODE}`);
+
+    expect(await screen.findByText('This sign-in request expired. Start again from OrcaSlicer.')).toBeInTheDocument();
+  });
+
+  it('shows the code for consent, then approves', async () => {
+    const get = mockDevice();
+    const approve = vi.spyOn(api, 'approveOrcaSlicerDevice').mockResolvedValue({ message: 'Sign-in approved' });
+
+    renderAt(`?code=${USER_CODE}`);
 
     expect(await screen.findByText('Allow OrcaSlicer to connect?')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith(USER_CODE);
     expect(screen.getByText('Signed in to Bambuddy as martin')).toBeInTheDocument();
-    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText('Device: Workshop PC')).toBeInTheDocument();
+    expect(screen.getByText(USER_CODE)).toBeInTheDocument();
+    expect(screen.getByText('Check that this code matches the one shown in OrcaSlicer.')).toBeInTheDocument();
+    expect(approve).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Allow' }));
 
-    expect(create).toHaveBeenCalledWith('Workshop PC');
-    await waitFor(() =>
-      expect(postMessage).toHaveBeenCalledWith({
-        type: 'bambuddy-token',
-        key: 'bb_k3y',
-        username: 'martin',
-        authEnabled: true,
-      }),
-    );
-    expect(await screen.findByText('Connected. You can close this window.')).toBeInTheDocument();
+    expect(approve).toHaveBeenCalledWith(USER_CODE);
+    expect(await screen.findByText('Connected. You can close this tab and return to OrcaSlicer.')).toBeInTheDocument();
   });
 
-  it('names the key after OrcaSlicer when the plugin sends no device', async () => {
-    const create = vi
-      .spyOn(api, 'createOrcaSlicerToken')
-      .mockResolvedValue({ key: 'bb_k3y', username: 'martin', auth_enabled: true });
+  it('deny rejects the request without approving', async () => {
+    mockDevice();
+    const approve = vi.spyOn(api, 'approveOrcaSlicerDevice');
+    const deny = vi.spyOn(api, 'denyOrcaSlicerDevice').mockResolvedValue({ message: 'Sign-in denied' });
 
-    renderAt('');
-    await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
-
-    expect(create).toHaveBeenCalledWith('OrcaSlicer');
-  });
-
-  it('deny tells the plugin and creates no key', async () => {
-    const create = vi.spyOn(api, 'createOrcaSlicerToken');
-
-    renderAt('?device=x');
+    renderAt(`?code=${USER_CODE}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Deny' }));
 
-    expect(postMessage).toHaveBeenCalledWith({ type: 'bambuddy-token-denied' });
-    expect(create).not.toHaveBeenCalled();
+    expect(deny).toHaveBeenCalledWith(USER_CODE);
+    expect(approve).not.toHaveBeenCalled();
+    expect(await screen.findByText('Connection denied. You can close this tab.')).toBeInTheDocument();
   });
 
-  it('skips consent while authentication is off', async () => {
-    mockUseAuth.authEnabled = false;
-    vi.spyOn(api, 'createOrcaSlicerToken').mockResolvedValue({ key: null, username: null, auth_enabled: false });
+  it('shows an error when approval fails', async () => {
+    mockDevice();
+    vi.spyOn(api, 'approveOrcaSlicerDevice').mockRejectedValue(new ApiError('Missing required permissions', 403));
 
-    renderAt('?device=x');
-
-    await waitFor(() =>
-      expect(postMessage).toHaveBeenCalledWith({
-        type: 'bambuddy-token',
-        key: null,
-        username: null,
-        authEnabled: false,
-      }),
-    );
-    expect(screen.queryByRole('button', { name: 'Allow' })).not.toBeInTheDocument();
-  });
-
-  it('shows an error and posts nothing when the key cannot be created', async () => {
-    vi.spyOn(api, 'createOrcaSlicerToken').mockRejectedValue(new ApiError('Missing required permissions', 403));
-
-    renderAt('?device=x');
+    renderAt(`?code=${USER_CODE}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
 
     expect(await screen.findByText("Can't connect OrcaSlicer")).toBeInTheDocument();
-    expect(postMessage).not.toHaveBeenCalled();
-  });
-
-  it('refuses to run outside the OrcaSlicer plugin', async () => {
-    delete window.orca;
-    const create = vi.spyOn(api, 'createOrcaSlicerToken');
-
-    renderAt('?device=x');
-
-    expect(await screen.findByText('Open this page from the Bambuddy plugin in OrcaSlicer.')).toBeInTheDocument();
-    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText('Missing required permissions')).toBeInTheDocument();
   });
 });
