@@ -10,7 +10,7 @@ from sqlalchemy import func, select, update
 from backend.app.models.api_key import APIKey
 from backend.app.models.auth_ephemeral import AuthEphemeralToken, TokenType
 
-BASE_URL = "/api/v1/connect/orcaslicer/device"
+BASE_URL = "/api/v1/connect/device"
 TOKEN_URL = f"{BASE_URL}/token"
 USER_CODE_PATTERN = r"^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$"
 

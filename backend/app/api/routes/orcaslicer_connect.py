@@ -38,7 +38,7 @@ from backend.app.schemas.connected_app import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/connect/orcaslicer", tags=["connected-apps"])
+router = APIRouter(prefix="/connect", tags=["connected-apps"])
 
 API_KEY_NAME_PREFIX = "OrcaSlicer - "
 API_KEY_NAME_MAX_LENGTH = APIKey.__table__.c.name.type.length
