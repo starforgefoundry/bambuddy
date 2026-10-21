@@ -5967,6 +5967,10 @@ errors: {
       title: 'G-kod-injektering',
       description: 'Tillämpa de modellspecifika G-kodsnuttar som konfigurerats i Inställningar på jobb från denna VP. Avstängd som standard.',
     },
+    queueAutoBatch: {
+      title: 'Gruppera Send All som en batch',
+      description: 'Lägg alla plattor från en Send All med flera plattor i kön som en batch. En Send med en platta förblir ett vanligt köobjekt. Avstängd som standard.',
+    },
     tailscaleDisabled: {
       title: 'Tailscale-integration',
       description: 'Aktivera för att markera denna VP som exponerad över Tailscale. Visar värdens Tailscale-adress så att du vet vilken IP du ska klistra in i slicern. CA-import-steget är oförändrat — denna växling har ingen effekt på certifikat.',
