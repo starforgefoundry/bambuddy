@@ -371,6 +371,11 @@ export interface ConnectAuthorizeInfo {
   already_granted: boolean;
 }
 
+export interface OrcaSlicerDevice {
+  user_code: string;
+  device_name: string;
+}
+
 // One row of the token-authenticated Cam Wall feed (#2531). Deliberately
 // smaller than PrinterStatus: no serial, no IP, no print filename — a kiosk URL
 // is not a secret, so the payload behind it must not be either.
@@ -7139,6 +7144,16 @@ export const api = {
     request<{ code: string; redirect_uri: string }>('/connect/authorize', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  getOrcaSlicerDevice: (userCode: string) =>
+    request<OrcaSlicerDevice>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}`),
+  approveOrcaSlicerDevice: (userCode: string) =>
+    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/approve`, {
+      method: 'POST',
+    }),
+  denyOrcaSlicerDevice: (userCode: string) =>
+    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/deny`, {
+      method: 'POST',
     }),
 
   // Long-lived camera tokens (#1108, #2531)

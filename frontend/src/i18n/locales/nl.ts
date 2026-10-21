@@ -7842,6 +7842,20 @@ export default {
       allow: 'Toestaan',
       deny: 'Annuleren',
     },
+    orcaslicer: {
+      connecting: 'OrcaSlicer koppelen…',
+      errorTitle: 'OrcaSlicer kan niet worden gekoppeld',
+      missingCode: 'Start het aanmelden vanuit de Bambuddy-plug-in in OrcaSlicer.',
+      expired: 'Dit aanmeldverzoek is verlopen. Begin opnieuw vanuit OrcaSlicer.',
+      failed: 'Koppelen van OrcaSlicer mislukt. Begin opnieuw vanuit OrcaSlicer.',
+      title: 'OrcaSlicer toestaan te koppelen?',
+      device: 'Apparaat: {{name}}',
+      checkCode: 'Controleer of deze code overeenkomt met de code in OrcaSlicer.',
+      permissions: 'OrcaSlicer kan je printers bekijken, bestanden naar de bibliotheek uploaden en prints aan de wachtrij toevoegen. Het krijgt een eigen API-sleutel, die je kunt intrekken via Instellingen > API-sleutels.',
+      deny: 'Weigeren',
+      connected: 'Gekoppeld. Je kunt dit tabblad sluiten en teruggaan naar OrcaSlicer.',
+      denied: 'Koppeling geweigerd. Je kunt dit tabblad sluiten.',
+    },
   },
   cameraTokens: {
     scope: {

@@ -56,6 +56,7 @@ from backend.app.api.routes import (
     notifications,
     obico,
     orca_cloud,
+    orcaslicer_connect,
     pending_uploads,
     pipeline_runs,
     print_log,
@@ -10161,6 +10162,10 @@ PUBLIC_API_ROUTES = {
     # Connected apps: the app's server swaps a code for the user's identity,
     # authenticated by its client secret rather than a login token.
     "/api/v1/connect/token",
+    # OrcaSlicer plugin sign-in: the plugin has no credentials yet when it
+    # starts the flow, then polls with its device code until a user approves.
+    "/api/v1/connect/orcaslicer/device",
+    "/api/v1/connect/orcaslicer/device/token",
     # Version check for updates (no sensitive data)
     "/api/v1/updates/version",
     # Metrics endpoint handles its own prometheus_token authentication
@@ -10670,6 +10675,7 @@ app.include_router(archive_purge.router, prefix=app_settings.api_prefix)
 app.include_router(makerworld.router, prefix=app_settings.api_prefix)
 app.include_router(api_keys.router, prefix=app_settings.api_prefix)
 app.include_router(connected_apps.router, prefix=app_settings.api_prefix)
+app.include_router(orcaslicer_connect.router, prefix=app_settings.api_prefix)
 app.include_router(webhook.router, prefix=app_settings.api_prefix)
 app.include_router(ams_history.router, prefix=app_settings.api_prefix)
 app.include_router(printer_sensor_history.router, prefix=app_settings.api_prefix)

@@ -7799,6 +7799,20 @@ export default {
       allow: 'Permitir',
       deny: 'Cancelar',
     },
+    orcaslicer: {
+      connecting: 'Conectando OrcaSlicer…',
+      errorTitle: 'No se puede conectar OrcaSlicer',
+      missingCode: 'Inicia sesión desde el complemento de Bambuddy en OrcaSlicer.',
+      expired: 'Esta solicitud de inicio de sesión ha caducado. Vuelve a empezar desde OrcaSlicer.',
+      failed: 'No se pudo conectar OrcaSlicer. Vuelve a empezar desde OrcaSlicer.',
+      title: '¿Permitir que OrcaSlicer se conecte?',
+      device: 'Dispositivo: {{name}}',
+      checkCode: 'Comprueba que este código coincide con el que muestra OrcaSlicer.',
+      permissions: 'OrcaSlicer podrá ver tus impresoras, subir archivos a la biblioteca y añadir impresiones a la cola. Recibe su propia clave API, que puedes revocar en Ajustes > Claves API.',
+      deny: 'Denegar',
+      connected: 'Conectado. Puedes cerrar esta pestaña y volver a OrcaSlicer.',
+      denied: 'Conexión denegada. Puedes cerrar esta pestaña.',
+    },
   },
   cameraTokens: {
     scope: {

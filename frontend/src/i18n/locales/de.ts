@@ -7791,6 +7791,20 @@ export default {
       allow: 'Erlauben',
       deny: 'Abbrechen',
     },
+    orcaslicer: {
+      connecting: 'OrcaSlicer wird verbunden…',
+      errorTitle: 'OrcaSlicer kann nicht verbunden werden',
+      missingCode: 'Starte die Anmeldung über das Bambuddy-Plugin in OrcaSlicer.',
+      expired: 'Diese Anmeldeanfrage ist abgelaufen. Starte sie in OrcaSlicer erneut.',
+      failed: 'Verbindung mit OrcaSlicer fehlgeschlagen. Starte die Anmeldung in OrcaSlicer erneut.',
+      title: 'OrcaSlicer die Verbindung erlauben?',
+      device: 'Gerät: {{name}}',
+      checkCode: 'Prüfe, ob dieser Code mit dem in OrcaSlicer angezeigten übereinstimmt.',
+      permissions: 'OrcaSlicer kann deine Drucker sehen, Dateien in die Bibliothek hochladen und Drucke zur Warteschlange hinzufügen. Dafür bekommt es einen eigenen API-Schlüssel, den du unter Einstellungen > API-Schlüssel widerrufen kannst.',
+      deny: 'Ablehnen',
+      connected: 'Verbunden. Du kannst diesen Tab schließen und zu OrcaSlicer zurückkehren.',
+      denied: 'Verbindung abgelehnt. Du kannst diesen Tab schließen.',
+    },
   },
   cameraTokens: {
     scope: {

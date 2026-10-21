@@ -7774,6 +7774,20 @@ export default {
       allow: '允许',
       deny: '取消',
     },
+    orcaslicer: {
+      connecting: '正在连接 OrcaSlicer…',
+      errorTitle: '无法连接 OrcaSlicer',
+      missingCode: '请从 OrcaSlicer 中的 Bambuddy 插件开始登录。',
+      expired: '此登录请求已过期。请从 OrcaSlicer 重新开始。',
+      failed: '连接 OrcaSlicer 失败。请从 OrcaSlicer 重新开始。',
+      title: '允许 OrcaSlicer 连接吗？',
+      device: '设备：{{name}}',
+      checkCode: '请确认此代码与 OrcaSlicer 中显示的一致。',
+      permissions: 'OrcaSlicer 将能够查看你的打印机、向文件库上传文件，并将打印添加到队列。它会获得专用的 API 密钥，你可以在“设置 > API 密钥”中撤销。',
+      deny: '拒绝',
+      connected: '已连接。你可以关闭此标签页并返回 OrcaSlicer。',
+      denied: '已拒绝连接。你可以关闭此标签页。',
+    },
   },
   cameraTokens: {
     scope: {

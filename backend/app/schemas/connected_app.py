@@ -107,3 +107,38 @@ class ConnectedUser(BaseModel):
 class ConnectTokenResponse(BaseModel):
     user: ConnectedUser
     issued_at: datetime
+
+
+ORCASLICER_DEFAULT_DEVICE_NAME = "OrcaSlicer"
+
+
+class OrcaSlicerDeviceRequest(BaseModel):
+    device_name: str = Field(default=ORCASLICER_DEFAULT_DEVICE_NAME, max_length=100)
+
+    @field_validator("device_name")
+    @classmethod
+    def _strip_device_name(cls, value: str) -> str:
+        return value.strip() or ORCASLICER_DEFAULT_DEVICE_NAME
+
+
+class OrcaSlicerDeviceResponse(BaseModel):
+    device_code: str
+    user_code: str
+    verification_path: str
+    expires_in: int
+    interval: int
+
+
+class OrcaSlicerDeviceInfo(BaseModel):
+    user_code: str
+    device_name: str
+
+
+class OrcaSlicerDeviceTokenRequest(BaseModel):
+    device_code: str = Field(min_length=1, max_length=128)
+
+
+class OrcaSlicerDeviceTokenResponse(BaseModel):
+    status: Literal["pending", "approved"]
+    key: str | None = None
+    username: str | None = None

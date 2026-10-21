@@ -74,6 +74,12 @@ _PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # secret (bcrypt-verified) plus a single-use, 60 s, PKCE-bound code in the body are the auth;
         # rate-limited per client and per IP. Refuses outright while Bambuddy auth is disabled.
         ("POST", "/api/v1/connect/token"),
+        # OrcaSlicer device sign-in start — creates only a pending, 10-minute request that does
+        # nothing until a signed-in user approves it. Rate-limited per IP; refused while auth is off.
+        ("POST", "/api/v1/connect/orcaslicer/device"),
+        # OrcaSlicer device poll — the random 256-bit device code in the body is the credential;
+        # it yields a key only after a user with queue:create approved, and only once.
+        ("POST", "/api/v1/connect/orcaslicer/device/token"),
         # 2FA send + verify — issued after password check; pre-auth token in cookie is the auth.
         ("POST", "/api/v1/auth/2fa/email/send"),
         ("POST", "/api/v1/auth/2fa/verify"),

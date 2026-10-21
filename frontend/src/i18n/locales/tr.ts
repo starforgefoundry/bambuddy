@@ -7728,6 +7728,20 @@ export default {
       allow: 'İzin ver',
       deny: 'İptal',
     },
+    orcaslicer: {
+      connecting: 'OrcaSlicer bağlanıyor…',
+      errorTitle: 'OrcaSlicer bağlanamıyor',
+      missingCode: 'Oturum açmayı OrcaSlicer\'daki Bambuddy eklentisinden başlatın.',
+      expired: 'Bu oturum açma isteğinin süresi doldu. OrcaSlicer\'dan yeniden başlatın.',
+      failed: 'OrcaSlicer bağlanamadı. OrcaSlicer\'dan yeniden başlatın.',
+      title: 'OrcaSlicer\'ın bağlanmasına izin verilsin mi?',
+      device: 'Cihaz: {{name}}',
+      checkCode: 'Bu kodun OrcaSlicer\'da gösterilen kodla aynı olduğunu kontrol edin.',
+      permissions: 'OrcaSlicer yazıcılarınızı görüntüleyebilecek, kitaplığa dosya yükleyebilecek ve kuyruğa baskı ekleyebilecek. Kendine ait bir API anahtarı alır; bu anahtarı Ayarlar > API Anahtarları bölümünden iptal edebilirsiniz.',
+      deny: 'Reddet',
+      connected: 'Bağlandı. Bu sekmeyi kapatıp OrcaSlicer\'a dönebilirsiniz.',
+      denied: 'Bağlantı reddedildi. Bu sekmeyi kapatabilirsiniz.',
+    },
   },
   cameraTokens: {
     scope: {

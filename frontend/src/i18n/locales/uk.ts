@@ -7832,6 +7832,20 @@ export default {
       allow: 'Дозволити',
       deny: 'Скасувати',
     },
+    orcaslicer: {
+      connecting: 'Підключення OrcaSlicer…',
+      errorTitle: 'Не вдається підключити OrcaSlicer',
+      missingCode: 'Почніть вхід із плагіна Bambuddy в OrcaSlicer.',
+      expired: 'Термін дії запиту на вхід минув. Почніть знову в OrcaSlicer.',
+      failed: 'Не вдалося підключити OrcaSlicer. Почніть знову в OrcaSlicer.',
+      title: 'Дозволити OrcaSlicer підключитися?',
+      device: 'Пристрій: {{name}}',
+      checkCode: 'Переконайтеся, що цей код збігається з кодом в OrcaSlicer.',
+      permissions: 'OrcaSlicer зможе переглядати ваші принтери, завантажувати файли до бібліотеки й додавати друк до черги. Він отримає власний API-ключ, який можна відкликати в розділі «Налаштування > API-ключі».',
+      deny: 'Відхилити',
+      connected: 'Підключено. Закрийте цю вкладку й поверніться до OrcaSlicer.',
+      denied: 'Підключення відхилено. Цю вкладку можна закрити.',
+    },
   },
   cameraTokens: {
     scope: {
