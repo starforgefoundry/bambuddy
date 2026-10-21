@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.9] - 2026-10-21
+
+### Changed
+- **Device sign-in API moved to `/api/v1/connect/device`** — the endpoints the OrcaSlicer plugin uses to sign in moved from `/api/v1/connect/orcaslicer/device`. Update the OrcaSlicer plugin together with this release.
+
 ## [1.2.5.7.8] - 2026-10-21
 
 ### Changed
