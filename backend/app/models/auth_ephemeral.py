@@ -43,6 +43,7 @@ class TokenType(str, Enum):
     EMAIL_OTP_SETUP = "email_otp_setup"
     SLICER_DOWNLOAD = "slicer_download"
     CONNECT_CODE = "connect_code"
+    ORCASLICER_DEVICE = "orca_device"
     # Written as bare strings where they are used; listed here so every kind is
     # known (see test_token_outlived_session).
     WEBSOCKET = "websocket"
@@ -66,6 +67,7 @@ class EventType(str, Enum):
     PASSWORD_RESET_IP = "password_reset_ip"
     CONNECT_TOKEN_CLIENT = "connect_client"
     CONNECT_TOKEN_IP = "connect_ip"
+    ORCASLICER_DEVICE_IP = "orca_device_ip"
 
 
 class AuthEphemeralToken(Base):
@@ -134,6 +136,28 @@ class AuthEphemeralToken(Base):
             expires_at=expires_at,
             # When the minting session began (core/auth.session_dated), if given
             **({"created_at": created_at} if created_at is not None else {}),
+        )
+
+    @classmethod
+    def new_orcaslicer_device(
+        cls,
+        device_code_hash: str,
+        user_code: str,
+        device_name: str,
+        expires_at: datetime,
+    ) -> AuthEphemeralToken:
+        """Create a pending OrcaSlicer device sign-in.
+
+        Only the SHA-256 of the device code is stored (``token``). Field reuse:
+        ``nonce`` holds the user code shown in OrcaSlicer, ``challenge_id`` the
+        device name, and ``username`` stays empty until a user approves.
+        """
+        return cls(
+            token=device_code_hash,
+            token_type=TokenType.ORCASLICER_DEVICE,
+            nonce=user_code,
+            challenge_id=device_name,
+            expires_at=expires_at,
         )
 
 

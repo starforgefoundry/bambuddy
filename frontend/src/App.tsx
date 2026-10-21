@@ -40,6 +40,7 @@ const ModelSourcesPage = lazyPage(() => import('./pages/ModelSourcesPage'), 'Mod
 const SystemInfoPage = lazyPage(() => import('./pages/SystemInfoPage'), 'SystemInfoPage');
 const LoginPage = lazyPage(() => import('./pages/LoginPage'), 'LoginPage');
 const ConnectAuthorizePage = lazyPage(() => import('./pages/ConnectAuthorizePage'), 'ConnectAuthorizePage');
+const ConnectOrcaSlicerPage = lazyPage(() => import('./pages/ConnectOrcaSlicerPage'), 'ConnectOrcaSlicerPage');
 const SetupPage = lazyPage(() => import('./pages/SetupPage'), 'SetupPage');
 const NotificationsPage = lazyPage(() => import('./pages/NotificationsPage'), 'NotificationsPage');
 const GCodeViewerPage = lazyPage(() => import('./pages/GCodeViewerPage'), 'GCodeViewerPage');
@@ -206,6 +207,9 @@ function App() {
                 {/* "Sign in with Bambuddy" for connected apps: standalone, no layout,
                     so it also fits inside the sidebar iframe of the app asking. */}
                 <Route path="/connect/authorize" element={<ProtectedRoute><ConnectAuthorizePage /></ProtectedRoute>} />
+
+                {/* OrcaSlicer plugin sign-in, opened in the slicer's webview */}
+                <Route path="/connect/orcaslicer" element={<ProtectedRoute><ConnectOrcaSlicerPage /></ProtectedRoute>} />
 
                 {/* Camera page - standalone, no layout, no WebSocket (doesn't need real-time updates) */}
                 <Route path="/camera/:printerId" element={<CameraPage />} />
