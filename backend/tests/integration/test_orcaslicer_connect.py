@@ -74,7 +74,7 @@ class TestOrcaSlicerDeviceSignIn:
         body = await _start(async_client, "  Workshop PC  ")
 
         assert re.match(USER_CODE_PATTERN, body["user_code"])
-        assert body["verification_path"] == f"/connect/orcaslicer?code={body['user_code']}"
+        assert body["verification_path"] == "/connect"
         assert body["expires_in"] == 600
         assert body["interval"] == 2
 
@@ -103,13 +103,20 @@ class TestOrcaSlicerDeviceSignIn:
         missing = await async_client.get(f"{BASE_URL}/ABCD-EFGH", headers=_auth(admin_token))
         assert missing.status_code == 404
 
+    async def test_typed_code_ignores_case_dash_and_spaces(self, async_client, admin_token):
+        body = await _start(async_client)
+        typed = f" {body['user_code'].replace('-', ' ').lower()} "
+        response = await async_client.get(f"{BASE_URL}/{typed}", headers=_auth(admin_token))
+        assert response.status_code == 200
+        assert response.json()["user_code"] == body["user_code"]
+
     async def test_approve_then_poll_returns_scoped_key_once(self, async_client, admin_token, db_session):
-        operator = await _user_in_group(async_client, admin_token, "Operators", "orcaop")
+        admin_id = (await async_client.get("/api/v1/auth/me", headers=_auth(admin_token))).json()["id"]
         body = await _start(async_client)
 
-        approve = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(operator["token"]))
+        approve = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(admin_token))
         assert approve.status_code == 200, approve.text
-        again = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(operator["token"]))
+        again = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(admin_token))
         assert again.status_code == 409
 
         response = await _poll(async_client, body["device_code"])
@@ -117,12 +124,12 @@ class TestOrcaSlicerDeviceSignIn:
         result = response.json()
         assert result["status"] == "approved"
         assert result["key"].startswith("bb_")
-        assert result["username"] == "orcaop"
+        assert result["username"] == "orcaadmin"
         assert await _device_rows(db_session) == []
 
         key = (await db_session.execute(select(APIKey))).scalar_one()
         assert key.name == "OrcaSlicer - Workshop PC"
-        assert key.user_id == operator["id"]
+        assert key.user_id == admin_id
         assert key.can_read_status and key.can_manage_library and key.can_queue
         assert not any(
             [
@@ -189,10 +196,20 @@ class TestOrcaSlicerDeviceSignIn:
         (row,) = await _device_rows(db_session)
         assert row.username is None
 
-    async def test_requires_queue_create_permission(self, async_client, admin_token, db_session):
-        viewer = await _user_in_group(async_client, admin_token, "Viewers", "orcaviewer")
+    @pytest.mark.parametrize(
+        ("group_name", "username"),
+        [
+            # Operators can queue but not create API keys.
+            ("Operators", "orcaop"),
+            ("Viewers", "orcaviewer"),
+        ],
+    )
+    async def test_requires_api_key_create_permission(
+        self, async_client, admin_token, db_session, group_name, username
+    ):
+        member = await _user_in_group(async_client, admin_token, group_name, username)
         body = await _start(async_client)
-        response = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(viewer["token"]))
+        response = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(member["token"]))
         assert response.status_code == 403
         (row,) = await _device_rows(db_session)
         assert row.username is None

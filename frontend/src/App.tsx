@@ -186,8 +186,8 @@ function App() {
                     so it also fits inside the sidebar iframe of the app asking. */}
                 <Route path="/connect/authorize" element={<ProtectedRoute><ConnectAuthorizePage /></ProtectedRoute>} />
 
-                {/* OrcaSlicer plugin sign-in, opened in the slicer's webview */}
-                <Route path="/connect/orcaslicer" element={<ProtectedRoute><ConnectOrcaSlicerPage /></ProtectedRoute>} />
+                {/* OrcaSlicer plugin sign-in, opened in the browser */}
+                <Route path="/connect" element={<ProtectedRoute><ConnectOrcaSlicerPage /></ProtectedRoute>} />
 
                 {/* Camera page - standalone, no layout, no WebSocket (doesn't need real-time updates) */}
                 <Route path="/camera/:printerId" element={<CameraPage />} />

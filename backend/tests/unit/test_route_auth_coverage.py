@@ -78,7 +78,7 @@ _PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # nothing until a signed-in user approves it. Rate-limited per IP; refused while auth is off.
         ("POST", "/api/v1/connect/orcaslicer/device"),
         # OrcaSlicer device poll — the random 256-bit device code in the body is the credential;
-        # it yields a key only after a user with queue:create approved, and only once.
+        # it yields a key only after a user with api_keys:create and queue:create approved, and only once.
         ("POST", "/api/v1/connect/orcaslicer/device/token"),
         # 2FA send + verify — issued after password check; pre-auth token in cookie is the auth.
         ("POST", "/api/v1/auth/2fa/email/send"),

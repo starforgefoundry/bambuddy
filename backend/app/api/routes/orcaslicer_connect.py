@@ -1,8 +1,8 @@
 """Connect the Bambuddy plugin in OrcaSlicer with a device-code sign-in.
 
 The plugin calls ``POST /device`` and opens the returned verification page in
-the user's browser, showing the user code next to it. The user signs in there
-and approves. Meanwhile the plugin polls ``POST /device/token`` with its device
+the user's browser, showing the user code in OrcaSlicer. The user signs in
+there, types the code and approves. Meanwhile the plugin polls ``POST /device/token`` with its device
 code and, once approved, receives an API key that can read printer status,
 upload to the library and queue prints, nothing more.
 """
@@ -13,7 +13,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.routes.connected_apps import require_signed_in_user
@@ -53,7 +53,9 @@ USER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 USER_CODE_GROUP_LENGTH = 4
 USER_CODE_GROUPS = 2
 
-VERIFICATION_PATH = "/connect/orcaslicer"
+USER_CODE_SEPARATOR = "-"
+
+VERIFICATION_PATH = "/connect"
 EXPIRED_OR_DENIED = "expired_or_denied"
 
 
@@ -61,22 +63,34 @@ def _hash_device_code(device_code: str) -> str:
     return hashlib.sha256(device_code.encode()).hexdigest()
 
 
-def _new_user_code() -> str:
-    groups = (
-        "".join(secrets.choice(USER_CODE_ALPHABET) for _ in range(USER_CODE_GROUP_LENGTH))
-        for _ in range(USER_CODE_GROUPS)
+def _format_user_code(characters: str) -> str:
+    return USER_CODE_SEPARATOR.join(
+        characters[start : start + USER_CODE_GROUP_LENGTH]
+        for start in range(0, len(characters), USER_CODE_GROUP_LENGTH)
     )
-    return "-".join(groups)
+
+
+def _new_user_code() -> str:
+    return _format_user_code(
+        "".join(secrets.choice(USER_CODE_ALPHABET) for _ in range(USER_CODE_GROUP_LENGTH * USER_CODE_GROUPS))
+    )
+
+
+def _normalize_user_code(typed: str) -> str:
+    """Accept the code as a person types it: any case, with or without the dash or spaces."""
+    return _format_user_code("".join(c for c in typed.upper() if c.isalnum()))
+
+
+def _live_request_filter(user_code: str):
+    return (
+        AuthEphemeralToken.token_type == TokenType.ORCASLICER_DEVICE,
+        AuthEphemeralToken.nonce == _normalize_user_code(user_code),
+        AuthEphemeralToken.expires_at > datetime.now(timezone.utc),
+    )
 
 
 async def _live_request(db: AsyncSession, user_code: str) -> AuthEphemeralToken | None:
-    result = await db.execute(
-        select(AuthEphemeralToken).where(
-            AuthEphemeralToken.token_type == TokenType.ORCASLICER_DEVICE,
-            AuthEphemeralToken.nonce == user_code.strip().upper(),
-            AuthEphemeralToken.expires_at > datetime.now(timezone.utc),
-        )
-    )
+    result = await db.execute(select(AuthEphemeralToken).where(*_live_request_filter(user_code)))
     return result.scalar_one_or_none()
 
 
@@ -130,7 +144,7 @@ async def start_device_sign_in(
     return OrcaSlicerDeviceResponse(
         device_code=device_code,
         user_code=user_code,
-        verification_path=f"{VERIFICATION_PATH}?code={user_code}",
+        verification_path=VERIFICATION_PATH,
         expires_in=int(DEVICE_CODE_TTL.total_seconds()),
         interval=POLL_INTERVAL_SECONDS,
     )
@@ -151,7 +165,7 @@ async def get_device_sign_in(
 async def approve_device_sign_in(
     user_code: str,
     db: AsyncSession = Depends(get_db),
-    user: User | None = RequirePermissionIfAuthEnabled(Permission.QUEUE_CREATE),
+    user: User | None = RequirePermissionIfAuthEnabled(Permission.API_KEYS_CREATE, Permission.QUEUE_CREATE),
 ):
     if not await is_auth_enabled(db):
         raise HTTPException(400, "Authentication is not enabled")
@@ -159,11 +173,15 @@ async def approve_device_sign_in(
     if user is None:
         raise HTTPException(403, "API keys cannot create API keys")
 
-    pending = await _live_request_or_404(db, user_code)
-    if pending.username is not None:
-        raise HTTPException(409, "Sign-in request already approved")
-    pending.username = user.username
+    await _live_request_or_404(db, user_code)
+    claimed = await db.execute(
+        update(AuthEphemeralToken)
+        .where(*_live_request_filter(user_code), AuthEphemeralToken.username.is_(None))
+        .values(username=user.username)
+    )
     await db.commit()
+    if claimed.rowcount == 0:
+        raise HTTPException(409, "Sign-in request already approved")
     return {"message": "Sign-in approved"}
 
 
