@@ -2,6 +2,26 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.7] - 2026-10-21
+
+Fork release built on upstream 1.2.5.7 — the trailing number is this fork's
+revision of that upstream version. Replaces 1.2.5.7.1 through 1.2.5.7.6.
+
+### Added
+- **A virtual printer can group a multi-plate "Send All" into one batch** — the VP queue path has split a Send All into one queue item per plate since #1733, but left them unrelated, so a three-plate upload read as three unconnected jobs while the same three plates sent from Bambuddy's own Print modal arrived as a batch. New per-VP toggle *Group Send All as a batch* (queue mode, off by default) closes that gap: the upload creates one batch named `<print name> · N plates` against the shared archive, carrying per-plate targets so a failed plate still reads as owed (#342) rather than the order quietly under-delivering. A single-plate Send is never batched — a batch of one says nothing the queue row doesn't. Toggling it restarts the VP instance, so turning it off takes effect on the next upload instead of at the next process restart.
+- **Sign in from the OrcaSlicer plugin** — the Bambuddy plugin for OrcaSlicer opens `/connect/orcaslicer` in your default browser. Sign in with your normal login (password or SSO), check that the code matches the one shown in OrcaSlicer, then approve; the plugin picks up its own API key, which can read printer status, upload to the library and queue prints. Revoke it in Settings > API Keys.
+
+### Changed
+- **A virtual printer stages a slicer "Send" and auto-dispatches a slicer "Print"** — with auto-dispatch on, a "Send" (FTP upload only) now lands in the queue as a staged item waiting for a manual start, while a "Print" is released to the scheduler as before. A "Print" whose job details arrive after the upload wait timed out is still released rather than left staged.
+- **Printer card sizes are now XS / S / M / L / XL** — the old S (compact) is now XS. The new S is M's width without status badges, temperatures, fans or the controls row. M, L and XL are unchanged. A saved size carries over, so an existing M stays M.
+- **Pause / Resume and Stop moved to the card footer** — while a print is running or paused they replace the Print button; when idle the Print button is shown.
+
+### Removed
+- **Opting a printer in to another model's queued jobs** — the *Also accept jobs for* printer setting from 1.2.5.7.1 is gone. Printers match queued jobs on their own model only.
+
+### Fixed
+- **Queue History scrolls with a single scrollbar** — the hidden thumbnail previews on the last rows gave the page a second, nested scrollbar.
+
 ## [1.2.5.7] - 2026-10-02
 
 ### Added
