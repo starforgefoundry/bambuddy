@@ -2,6 +2,15 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.2.5.7.8] - 2026-10-21
+
+### Changed
+- **OrcaSlicer sign-in asks you to type the code** — the plugin opens `/connect`, and you enter the code shown in OrcaSlicer before approving. A link can no longer carry the code in, so a request someone else started can't be approved with one click.
+- **Approving an OrcaSlicer sign-in needs the API Keys create permission** — the sign-in creates an API key, so it now needs the same permission as creating one in Settings > API Keys. Operators in the default groups can no longer approve.
+
+### Fixed
+- **Two people approving the same OrcaSlicer sign-in at once** — only the first approval counts; the second is told the request was already approved.
+
 ## [1.2.5.7.7] - 2026-10-21
 
 Fork release built on upstream 1.2.5.7 — the trailing number is this fork's
