@@ -351,6 +351,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: 'Zeer kleine kaarten',
       small: 'Kleine kaarten',
       medium: 'Middelgrote kaarten',
       large: 'Grote kaarten',

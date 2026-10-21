@@ -160,10 +160,11 @@ describe('PrintersPage print control wiring', () => {
     );
   });
 
-  it('Stop and Pause are disabled on an IDLE printer', async () => {
+  it('an IDLE printer shows Print instead of Stop and Pause', async () => {
     setup('IDLE');
-    expect(await controlButton('Stop')).toBeDisabled();
-    expect(await controlButton('Pause')).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Print' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
   });
 
   it('without printers:control the buttons are disabled and clicking sends nothing', async () => {
