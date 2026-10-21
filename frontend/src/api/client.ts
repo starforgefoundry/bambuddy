@@ -7146,13 +7146,13 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   getOrcaSlicerDevice: (userCode: string) =>
-    request<OrcaSlicerDevice>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}`),
+    request<OrcaSlicerDevice>(`/connect/device/${encodeURIComponent(userCode)}`),
   approveOrcaSlicerDevice: (userCode: string) =>
-    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/approve`, {
+    request<{ message: string }>(`/connect/device/${encodeURIComponent(userCode)}/approve`, {
       method: 'POST',
     }),
   denyOrcaSlicerDevice: (userCode: string) =>
-    request<{ message: string }>(`/connect/orcaslicer/device/${encodeURIComponent(userCode)}/deny`, {
+    request<{ message: string }>(`/connect/device/${encodeURIComponent(userCode)}/deny`, {
       method: 'POST',
     }),
 

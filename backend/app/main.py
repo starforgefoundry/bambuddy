@@ -10164,8 +10164,8 @@ PUBLIC_API_ROUTES = {
     "/api/v1/connect/token",
     # OrcaSlicer plugin sign-in: the plugin has no credentials yet when it
     # starts the flow, then polls with its device code until a user approves.
-    "/api/v1/connect/orcaslicer/device",
-    "/api/v1/connect/orcaslicer/device/token",
+    "/api/v1/connect/device",
+    "/api/v1/connect/device/token",
     # Version check for updates (no sensitive data)
     "/api/v1/updates/version",
     # Metrics endpoint handles its own prometheus_token authentication
