@@ -299,6 +299,7 @@ export default {
     },
     // Card size
     cardSize: {
+      extraSmall: '極小',
       small: '小',
       medium: '中',
       large: '大',
