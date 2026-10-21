@@ -1,8 +1,8 @@
 /**
  * OrcaSlicer plugin sign-in approval page.
  *
- * The page must approve the plugin's request only after the user allows it,
- * and show the code so the user can match it against OrcaSlicer.
+ * The user must type the code shown in OrcaSlicer: a link can't carry it in,
+ * so a request someone else started can't be approved with one click.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -20,9 +20,9 @@ import { ConnectOrcaSlicerPage } from '../../pages/ConnectOrcaSlicerPage';
 
 const USER_CODE = 'ABCD-EFGH';
 
-function renderAt(search: string) {
+function renderAt(search = '') {
   return render(
-    <MemoryRouter initialEntries={[`/connect/orcaslicer${search}`]}>
+    <MemoryRouter initialEntries={[`/connect${search}`]}>
       <ConnectOrcaSlicerPage />
     </MemoryRouter>,
   );
@@ -32,40 +32,50 @@ function mockDevice() {
   return vi.spyOn(api, 'getOrcaSlicerDevice').mockResolvedValue({ user_code: USER_CODE, device_name: 'Workshop PC' });
 }
 
+async function enterCode(code: string) {
+  await userEvent.type(screen.getByRole('textbox', { name: 'Enter the code shown in OrcaSlicer.' }), code);
+  await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('ConnectOrcaSlicerPage', () => {
-  it('asks the plugin to start sign-in when there is no code', async () => {
-    const get = vi.spyOn(api, 'getOrcaSlicerDevice');
+  it('ignores a code in the link and asks for it instead', async () => {
+    const get = mockDevice();
 
-    renderAt('');
+    renderAt(`?code=${USER_CODE}`);
 
-    expect(await screen.findByText('Start sign-in from the Bambuddy plugin in OrcaSlicer.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Enter the code shown in OrcaSlicer.' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     expect(get).not.toHaveBeenCalled();
   });
 
-  it('reports an expired request', async () => {
+  it('lets the user retry a code that matches no request', async () => {
     vi.spyOn(api, 'getOrcaSlicerDevice').mockRejectedValue(new ApiError('Sign-in request not found or expired', 404));
 
-    renderAt(`?code=${USER_CODE}`);
+    renderAt();
+    await enterCode('wxyz-2345');
 
-    expect(await screen.findByText('This sign-in request expired. Start again from OrcaSlicer.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('No sign-in request matches this code. Check it, or start again from OrcaSlicer.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Enter the code shown in OrcaSlicer.' })).toHaveValue('WXYZ-2345');
   });
 
-  it('shows the code for consent, then approves', async () => {
+  it('looks up the typed code, then approves', async () => {
     const get = mockDevice();
     const approve = vi.spyOn(api, 'approveOrcaSlicerDevice').mockResolvedValue({ message: 'Sign-in approved' });
 
-    renderAt(`?code=${USER_CODE}`);
+    renderAt();
+    await enterCode('abcd-efgh');
 
     expect(await screen.findByText('Allow OrcaSlicer to connect?')).toBeInTheDocument();
     expect(get).toHaveBeenCalledWith(USER_CODE);
     expect(screen.getByText('Signed in to Bambuddy as martin')).toBeInTheDocument();
     expect(screen.getByText('Device: Workshop PC')).toBeInTheDocument();
     expect(screen.getByText(USER_CODE)).toBeInTheDocument();
-    expect(screen.getByText('Check that this code matches the one shown in OrcaSlicer.')).toBeInTheDocument();
     expect(approve).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Allow' }));
@@ -79,7 +89,8 @@ describe('ConnectOrcaSlicerPage', () => {
     const approve = vi.spyOn(api, 'approveOrcaSlicerDevice');
     const deny = vi.spyOn(api, 'denyOrcaSlicerDevice').mockResolvedValue({ message: 'Sign-in denied' });
 
-    renderAt(`?code=${USER_CODE}`);
+    renderAt();
+    await enterCode(USER_CODE);
     await userEvent.click(await screen.findByRole('button', { name: 'Deny' }));
 
     expect(deny).toHaveBeenCalledWith(USER_CODE);
@@ -91,7 +102,8 @@ describe('ConnectOrcaSlicerPage', () => {
     mockDevice();
     vi.spyOn(api, 'approveOrcaSlicerDevice').mockRejectedValue(new ApiError('Missing required permissions', 403));
 
-    renderAt(`?code=${USER_CODE}`);
+    renderAt();
+    await enterCode(USER_CODE);
     await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
 
     expect(await screen.findByText("Can't connect OrcaSlicer")).toBeInTheDocument();
