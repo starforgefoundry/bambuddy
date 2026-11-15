@@ -2,6 +2,11 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.3.1.2] - 2026-11-15
+
+### Fixed
+- **An OrcaSlicer sign-in approved before the user's current session is refused** — if the approving user is renamed, deleted, or changes their password before the plugin collects its key, the plugin gets no key and has to start again.
+
 ## [1.3.1.1] - 2026-11-15
 
 Fork release built on upstream 1.3.1 — the trailing number is this fork's
