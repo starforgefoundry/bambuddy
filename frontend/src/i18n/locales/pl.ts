@@ -8528,6 +8528,22 @@ export default {
       allow: 'Zezwól',
       deny: 'Anuluj',
     },
+    orcaslicer: {
+      connecting: 'Łączenie z OrcaSlicer…',
+      errorTitle: 'Nie można połączyć OrcaSlicer',
+      enterTitle: 'Połącz OrcaSlicer',
+      enterCode: 'Wpisz kod wyświetlany w OrcaSlicer.',
+      expired: 'To żądanie logowania wygasło. Zacznij ponownie w OrcaSlicer.',
+      failed: 'Nie udało się połączyć OrcaSlicer. Zacznij ponownie w OrcaSlicer.',
+      title: 'Zezwolić OrcaSlicer na połączenie?',
+      device: 'Urządzenie: {{name}}',
+      continue: 'Dalej',
+      codeNotFound: 'Żadne żądanie logowania nie pasuje do tego kodu. Sprawdź go lub zacznij ponownie w OrcaSlicer.',
+      permissions: 'OrcaSlicer będzie mógł wyświetlać twoje drukarki, przesyłać pliki do biblioteki i dodawać wydruki do kolejki. Otrzyma własny klucz API, który możesz odwołać w Ustawienia > Klucze API.',
+      deny: 'Odmów',
+      connected: 'Połączono. Możesz zamknąć tę kartę i wrócić do OrcaSlicer.',
+      denied: 'Odmówiono połączenia. Możesz zamknąć tę kartę.',
+    },
   },
   cameraTokens: {
     scope: {
