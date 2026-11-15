@@ -2,6 +2,22 @@
 
 All notable changes to Bambuddy will be documented in this file.
 
+## [1.3.1.1] - 2026-11-15
+
+Fork release built on upstream 1.3.1 — the trailing number is this fork's
+revision of that upstream version. Replaces 1.2.5.7.7 through 1.2.5.7.9.
+
+### Added
+- **Sign in from the OrcaSlicer plugin** — the plugin opens `/connect` in your browser. Sign in, type the code shown in OrcaSlicer and approve; the plugin gets its own API key, which can read printer status, upload to the library and queue prints. Approving needs the API Keys create permission, and only the first approval of a request counts. Revoke the key in Settings > API Keys. The plugin calls `/api/v1/connect/device`.
+
+### Changed
+- **Printer card sizes are now XS / S / M / L / XL** — the old S (compact) is now XS. The new S is M's width without status badges, temperatures, fans or the controls row. A saved size carries over. Cam Wall tile sizes stay S / M / L / XL.
+- **Pause / Resume and Stop moved to the card footer** — while a print is running or paused they replace the Print button.
+
+### Removed
+- **Virtual printer Send All batching and staged "Send"** — the fork-only virtual printer changes from 1.2.5.7.7 are dropped; virtual printers behave as in upstream 1.3.1.
+- **Queue History scrollbar fix** — upstream 1.3.1 replaced the thumbnail preview, so the fork's fix is no longer needed.
+
 ## [1.3.1] - 2026-11-11
 
 ### Added
