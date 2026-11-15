@@ -22,6 +22,7 @@ from backend.app.core.auth import (
     generate_api_key,
     get_user_by_username,
     is_auth_enabled,
+    token_outlived_its_session,
 )
 from backend.app.core.database import get_db
 from backend.app.core.permissions import Permission
@@ -105,7 +106,7 @@ async def _live_request_or_404(db: AsyncSession, user_code: str) -> AuthEphemera
 async def start_device_sign_in(
     request: Request,
     data: OrcaSlicerDeviceRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Start a sign-in. Public: the plugin has no credentials yet."""
     from backend.app.api.routes.auth import _get_client_ip
@@ -153,7 +154,7 @@ async def start_device_sign_in(
 @router.get("/device/{user_code}", response_model=OrcaSlicerDeviceInfo)
 async def get_device_sign_in(
     user_code: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     user: User = Depends(require_signed_in_user),
 ):
     """What the consent screen shows."""
@@ -164,7 +165,7 @@ async def get_device_sign_in(
 @router.post("/device/{user_code}/approve")
 async def approve_device_sign_in(
     user_code: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     user: User | None = RequirePermissionIfAuthEnabled(Permission.API_KEYS_CREATE, Permission.QUEUE_CREATE),
 ):
     if not await is_auth_enabled(db):
@@ -177,7 +178,8 @@ async def approve_device_sign_in(
     claimed = await db.execute(
         update(AuthEphemeralToken)
         .where(*_live_request_filter(user_code), AuthEphemeralToken.username.is_(None))
-        .values(username=user.username)
+        # The request is named after the user from this moment, so its session check counts from here.
+        .values(username=user.username, created_at=datetime.now(timezone.utc))
     )
     await db.commit()
     if claimed.rowcount == 0:
@@ -188,7 +190,7 @@ async def approve_device_sign_in(
 @router.post("/device/{user_code}/deny")
 async def deny_device_sign_in(
     user_code: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     user: User = Depends(require_signed_in_user),
 ):
     pending = await _live_request_or_404(db, user_code)
@@ -200,7 +202,7 @@ async def deny_device_sign_in(
 @router.post("/device/token", response_model=OrcaSlicerDeviceTokenResponse)
 async def poll_device_sign_in(
     data: OrcaSlicerDeviceTokenRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Polled by the plugin. Public: the device code is the credential."""
     now = datetime.now(timezone.utc)
@@ -226,13 +228,15 @@ async def poll_device_sign_in(
             AuthEphemeralToken.token_type == TokenType.ORCASLICER_DEVICE,
             AuthEphemeralToken.username.is_not(None),
         )
-        .returning(AuthEphemeralToken.username, AuthEphemeralToken.challenge_id)
+        .returning(AuthEphemeralToken.username, AuthEphemeralToken.challenge_id, AuthEphemeralToken.created_at)
     )
     approved = consumed.one_or_none()
     await db.commit()
     if approved is None:
         raise HTTPException(404, EXPIRED_OR_DENIED)
-    username, device_name = approved
+    username, device_name, approved_at = approved
+    if await token_outlived_its_session(db, username, approved_at):
+        raise HTTPException(404, EXPIRED_OR_DENIED)
 
     user = await get_user_by_username(db, username)
     if user is None or not user.is_active:

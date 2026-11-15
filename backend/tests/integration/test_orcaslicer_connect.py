@@ -181,6 +181,21 @@ class TestOrcaSlicerDeviceSignIn:
         assert response.status_code == 404
         assert response.json() == {"detail": "expired_or_denied"}
 
+    async def test_approval_from_before_the_users_session_is_refused(self, async_client, admin_token, db_session):
+        body = await _start(async_client)
+        approve = await async_client.post(f"{BASE_URL}/{body['user_code']}/approve", headers=_auth(admin_token))
+        assert approve.status_code == 200, approve.text
+        await db_session.execute(
+            update(AuthEphemeralToken)
+            .where(AuthEphemeralToken.token_type == TokenType.ORCASLICER_DEVICE)
+            .values(created_at=datetime(2000, 1, 1, tzinfo=timezone.utc))
+        )
+        await db_session.commit()
+
+        response = await _poll(async_client, body["device_code"])
+        assert response.status_code == 404
+        assert await _key_count(db_session) == 0
+
     async def test_unknown_device_code(self, async_client, admin_token):
         response = await _poll(async_client, "not-a-real-code")
         assert response.status_code == 404

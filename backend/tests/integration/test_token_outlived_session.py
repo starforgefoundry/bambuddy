@@ -168,6 +168,7 @@ async def test_every_token_kind_named_after_a_user_is_covered():
         TokenType.OIDC_EXCHANGE.value,
         TokenType.EMAIL_OTP_SETUP.value,
         TokenType.CONNECT_CODE.value,
+        TokenType.ORCASLICER_DEVICE.value,  # test_orcaslicer_connect.py
     }
     named_by_nobody = {
         TokenType.OIDC_STATE.value,  # before anyone is signed in
